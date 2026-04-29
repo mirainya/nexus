@@ -6,9 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mirainya/nexus/internal/model"
+	"gorm.io/gorm"
 )
 
-func QuotaCheck() gin.HandlerFunc {
+func QuotaCheck(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKeyID, exists := c.Get("api_key_id")
 		if !exists {
@@ -17,7 +18,7 @@ func QuotaCheck() gin.HandlerFunc {
 		}
 
 		var apiKey model.APIKey
-		if err := model.DB().First(&apiKey, apiKeyID).Error; err != nil {
+		if err := db.First(&apiKey, apiKeyID).Error; err != nil {
 			c.Next()
 			return
 		}
@@ -33,7 +34,7 @@ func QuotaCheck() gin.HandlerFunc {
 
 		if apiKey.DailyLimit > 0 || apiKey.DailyTokens > 0 {
 			var daily model.APIUsage
-			model.DB().Where("api_key_id = ? AND date = ?", apiKey.ID, today).First(&daily)
+			db.Where("api_key_id = ? AND date = ?", apiKey.ID, today).First(&daily)
 
 			if apiKey.DailyLimit > 0 && daily.Requests >= apiKey.DailyLimit {
 				c.JSON(http.StatusTooManyRequests, gin.H{"code": 429, "message": "daily request limit exceeded"})
@@ -52,7 +53,7 @@ func QuotaCheck() gin.HandlerFunc {
 				Requests int
 				Tokens   int64
 			}
-			model.DB().Model(&model.APIUsage{}).
+			db.Model(&model.APIUsage{}).
 				Select("COALESCE(SUM(requests), 0) as requests, COALESCE(SUM(tokens), 0) as tokens").
 				Where("api_key_id = ? AND date LIKE ?", apiKey.ID, month+"%").
 				Scan(&monthly)

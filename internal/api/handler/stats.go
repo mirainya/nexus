@@ -11,8 +11,8 @@ type StatsHandler struct {
 	svc *service.StatsService
 }
 
-func NewStatsHandler() *StatsHandler {
-	return &StatsHandler{svc: service.NewStatsService()}
+func NewStatsHandler(svc *service.StatsService) *StatsHandler {
+	return &StatsHandler{svc: svc}
 }
 
 func (h *StatsHandler) Dashboard(c *gin.Context) {

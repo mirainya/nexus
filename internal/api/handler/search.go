@@ -11,8 +11,8 @@ type SearchHandler struct {
 	svc *service.SearchService
 }
 
-func NewSearchHandler() *SearchHandler {
-	return &SearchHandler{svc: service.NewSearchService()}
+func NewSearchHandler(svc *service.SearchService) *SearchHandler {
+	return &SearchHandler{svc: svc}
 }
 
 func (h *SearchHandler) Search(c *gin.Context) {

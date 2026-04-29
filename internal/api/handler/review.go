@@ -11,8 +11,8 @@ type ReviewHandler struct {
 	svc *service.ReviewService
 }
 
-func NewReviewHandler() *ReviewHandler {
-	return &ReviewHandler{svc: service.NewReviewService()}
+func NewReviewHandler(svc *service.ReviewService) *ReviewHandler {
+	return &ReviewHandler{svc: svc}
 }
 
 func (h *ReviewHandler) List(c *gin.Context) {

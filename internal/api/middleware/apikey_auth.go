@@ -8,9 +8,10 @@ import (
 	"github.com/mirainya/nexus/internal/api/resp"
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/errors"
+	"gorm.io/gorm"
 )
 
-func APIKeyAuth() gin.HandlerFunc {
+func APIKeyAuth(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := c.GetHeader("X-API-Key")
 		if key == "" {
@@ -29,7 +30,7 @@ func APIKeyAuth() gin.HandlerFunc {
 		}
 
 		var apiKey model.APIKey
-		if err := model.DB().Where("key = ? AND active = ?", key, true).First(&apiKey).Error; err != nil {
+		if err := db.Where("key = ? AND active = ?", key, true).First(&apiKey).Error; err != nil {
 			resp.Unauthorized(c, errors.ErrUnauthorized)
 			c.Abort()
 			return

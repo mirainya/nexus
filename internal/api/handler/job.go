@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/hibiken/asynq"
 	"github.com/mirainya/nexus/internal/api/resp"
 	"github.com/mirainya/nexus/internal/service"
 	"github.com/mirainya/nexus/pkg/errors"
@@ -12,8 +11,8 @@ type JobHandler struct {
 	svc *service.JobService
 }
 
-func NewJobHandler(client *asynq.Client) *JobHandler {
-	return &JobHandler{svc: service.NewJobService(client)}
+func NewJobHandler(svc *service.JobService) *JobHandler {
+	return &JobHandler{svc: svc}
 }
 
 func (h *JobHandler) Submit(c *gin.Context) {

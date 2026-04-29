@@ -72,7 +72,7 @@ func main() {
 		}
 	}
 
-	llm.Init()
+	llm.Init(db)
 	cache.Init()
 	sse.Init()
 	processor.Init()
@@ -86,8 +86,9 @@ func main() {
 	if config.C.Redis.Addr != "" {
 		asynqClient = worker.NewClient()
 		if runWorker {
-			workerSrv = startWorker()
-			if err := service.NewJobService(asynqClient).RecoverStalled(); err != nil {
+			jobSvc := service.NewJobService(db, asynqClient, sse.Default(), llm.G)
+			workerSrv = startWorker(jobSvc)
+			if err := jobSvc.RecoverStalled(); err != nil {
 				log.Fatalf("failed to recover stalled jobs: %v", err)
 			}
 		}
@@ -97,7 +98,7 @@ func main() {
 
 	var httpSrv *http.Server
 	if runAPI {
-		r := api.SetupRouter(asynqClient)
+		r := api.SetupRouter(db, asynqClient, sse.Default(), llm.G)
 		console.RegisterRoutes(r)
 		addr := fmt.Sprintf(":%d", config.C.Server.Port)
 		httpSrv = &http.Server{Addr: addr, Handler: r}
@@ -154,10 +155,10 @@ func main() {
 	logger.Info("server exited")
 }
 
-func startWorker() *asynq.Server {
+func startWorker(jobSvc *service.JobService) *asynq.Server {
 	srv := worker.NewServer()
 	mux := asynq.NewServeMux()
-	worker.RegisterHandlers(mux)
+	worker.RegisterHandlers(mux, jobSvc)
 	go func() {
 		logger.Info("worker starting...")
 		if err := srv.Run(mux); err != nil {

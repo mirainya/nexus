@@ -1,10 +1,13 @@
 package service
 
-import "github.com/mirainya/nexus/internal/model"
+import (
+	"github.com/mirainya/nexus/internal/model"
+	"gorm.io/gorm"
+)
 
-type GraphService struct{}
+type GraphService struct{ db *gorm.DB }
 
-func NewGraphService() *GraphService { return &GraphService{} }
+func NewGraphService(db *gorm.DB) *GraphService { return &GraphService{db: db} }
 
 type GraphNode struct {
 	ID         uint   `json:"id"`
@@ -25,13 +28,12 @@ type GraphData struct {
 }
 
 func (s *GraphService) GetGraphData(limit int) (*GraphData, error) {
-	db := model.DB()
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
 
 	var entities []model.Entity
-	if err := db.Limit(limit).Find(&entities).Error; err != nil {
+	if err := s.db.Limit(limit).Find(&entities).Error; err != nil {
 		return nil, err
 	}
 
@@ -48,7 +50,7 @@ func (s *GraphService) GetGraphData(limit int) (*GraphData, error) {
 	}
 
 	var relations []model.Relation
-	if err := db.Find(&relations).Error; err != nil {
+	if err := s.db.Find(&relations).Error; err != nil {
 		return nil, err
 	}
 

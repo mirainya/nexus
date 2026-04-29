@@ -5,11 +5,12 @@ import (
 
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/crypto"
+	"gorm.io/gorm"
 )
 
-type CredentialService struct{}
+type CredentialService struct{ db *gorm.DB }
 
-func NewCredentialService() *CredentialService { return &CredentialService{} }
+func NewCredentialService(db *gorm.DB) *CredentialService { return &CredentialService{db: db} }
 
 type CredentialCreateRequest struct {
 	APIKeyID     uint   `json:"api_key_id" binding:"required"`
@@ -68,7 +69,7 @@ func (s *CredentialService) Create(req CredentialCreateRequest) (*CredentialResp
 		DefaultModel: req.DefaultModel,
 		Active:       true,
 	}
-	if err := model.DB().Create(&cred).Error; err != nil {
+	if err := s.db.Create(&cred).Error; err != nil {
 		return nil, err
 	}
 
@@ -78,7 +79,7 @@ func (s *CredentialService) Create(req CredentialCreateRequest) (*CredentialResp
 
 func (s *CredentialService) List(apiKeyID uint) ([]CredentialResponse, error) {
 	var creds []model.Credential
-	q := model.DB().Order("id DESC")
+	q := s.db.Order("id DESC")
 	if apiKeyID > 0 {
 		q = q.Where("api_key_id = ?", apiKeyID)
 	}
@@ -99,7 +100,7 @@ func (s *CredentialService) List(apiKeyID uint) ([]CredentialResponse, error) {
 
 func (s *CredentialService) Update(id uint, req CredentialUpdateRequest) (*CredentialResponse, error) {
 	var cred model.Credential
-	if err := model.DB().First(&cred, id).Error; err != nil {
+	if err := s.db.First(&cred, id).Error; err != nil {
 		return nil, err
 	}
 
@@ -128,12 +129,12 @@ func (s *CredentialService) Update(id uint, req CredentialUpdateRequest) (*Crede
 	}
 
 	if len(updates) > 0 {
-		if err := model.DB().Model(&cred).Updates(updates).Error; err != nil {
+		if err := s.db.Model(&cred).Updates(updates).Error; err != nil {
 			return nil, err
 		}
 	}
 
-	model.DB().First(&cred, id)
+	s.db.First(&cred, id)
 	masked := "****"
 	if plain, err := crypto.Decrypt(cred.EncryptedKey); err == nil {
 		masked = crypto.MaskKey(plain)
@@ -143,12 +144,12 @@ func (s *CredentialService) Update(id uint, req CredentialUpdateRequest) (*Crede
 }
 
 func (s *CredentialService) Delete(id uint) error {
-	return model.DB().Delete(&model.Credential{}, id).Error
+	return s.db.Delete(&model.Credential{}, id).Error
 }
 
 func (s *CredentialService) GetDecrypted(id uint) (*model.Credential, string, error) {
 	var cred model.Credential
-	if err := model.DB().First(&cred, id).Error; err != nil {
+	if err := s.db.First(&cred, id).Error; err != nil {
 		return nil, "", err
 	}
 	if !cred.Active {

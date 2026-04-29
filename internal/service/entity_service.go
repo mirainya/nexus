@@ -3,16 +3,17 @@ package service
 import (
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/config"
+	"gorm.io/gorm"
 )
 
-type EntityService struct{}
+type EntityService struct{ db *gorm.DB }
 
-func NewEntityService() *EntityService { return &EntityService{} }
+func NewEntityService(db *gorm.DB) *EntityService { return &EntityService{db: db} }
 
 func (s *EntityService) List(entityType string, keyword string, page, pageSize int) ([]model.Entity, int64, error) {
 	var list []model.Entity
 	var total int64
-	q := model.DB().Model(&model.Entity{})
+	q := s.db.Model(&model.Entity{})
 	if entityType != "" {
 		q = q.Where("type = ?", entityType)
 	}
@@ -31,13 +32,13 @@ func (s *EntityService) List(entityType string, keyword string, page, pageSize i
 
 func (s *EntityService) GetByID(id uint) (*model.Entity, error) {
 	var e model.Entity
-	err := model.DB().First(&e, id).Error
+	err := s.db.First(&e, id).Error
 	return &e, err
 }
 
 func (s *EntityService) GetRelations(entityID uint) ([]model.Relation, error) {
 	var list []model.Relation
-	err := model.DB().Where("from_entity_id = ? OR to_entity_id = ?", entityID, entityID).
+	err := s.db.Where("from_entity_id = ? OR to_entity_id = ?", entityID, entityID).
 		Preload("FromEntity").Preload("ToEntity").Find(&list).Error
 	return list, err
 }

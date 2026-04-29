@@ -12,8 +12,8 @@ type PipelineHandler struct {
 	svc *service.PipelineService
 }
 
-func NewPipelineHandler() *PipelineHandler {
-	return &PipelineHandler{svc: service.NewPipelineService()}
+func NewPipelineHandler(svc *service.PipelineService) *PipelineHandler {
+	return &PipelineHandler{svc: svc}
 }
 
 func (h *PipelineHandler) Create(c *gin.Context) {

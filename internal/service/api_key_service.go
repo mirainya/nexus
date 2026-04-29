@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/mirainya/nexus/internal/model"
+	"gorm.io/gorm"
 )
 
-type APIKeyService struct{}
+type APIKeyService struct{ db *gorm.DB }
 
-func NewAPIKeyService() *APIKeyService { return &APIKeyService{} }
+func NewAPIKeyService(db *gorm.DB) *APIKeyService { return &APIKeyService{db: db} }
 
 type APIKeyCreateRequest struct {
 	Name          string `json:"name" binding:"required"`
@@ -104,7 +105,7 @@ func (s *APIKeyService) Create(req APIKeyCreateRequest) (*APIKeyResponse, error)
 		}
 		ak.ExpiresAt = &t
 	}
-	if err := model.DB().Create(&ak).Error; err != nil {
+	if err := s.db.Create(&ak).Error; err != nil {
 		return nil, err
 	}
 	resp := toAPIKeyResponse(&ak, true)
@@ -113,7 +114,7 @@ func (s *APIKeyService) Create(req APIKeyCreateRequest) (*APIKeyResponse, error)
 
 func (s *APIKeyService) List() ([]APIKeyResponse, error) {
 	var keys []model.APIKey
-	if err := model.DB().Order("id DESC").Find(&keys).Error; err != nil {
+	if err := s.db.Order("id DESC").Find(&keys).Error; err != nil {
 		return nil, err
 	}
 	result := make([]APIKeyResponse, 0, len(keys))
@@ -125,7 +126,7 @@ func (s *APIKeyService) List() ([]APIKeyResponse, error) {
 
 func (s *APIKeyService) Update(id uint, req APIKeyUpdateRequest) (*APIKeyResponse, error) {
 	var ak model.APIKey
-	if err := model.DB().First(&ak, id).Error; err != nil {
+	if err := s.db.First(&ak, id).Error; err != nil {
 		return nil, err
 	}
 	updates := map[string]any{}
@@ -162,17 +163,17 @@ func (s *APIKeyService) Update(id uint, req APIKeyUpdateRequest) (*APIKeyRespons
 		}
 	}
 	if len(updates) > 0 {
-		if err := model.DB().Model(&ak).Updates(updates).Error; err != nil {
+		if err := s.db.Model(&ak).Updates(updates).Error; err != nil {
 			return nil, err
 		}
 	}
-	model.DB().First(&ak, id)
+	s.db.First(&ak, id)
 	resp := toAPIKeyResponse(&ak, false)
 	return &resp, nil
 }
 
 func (s *APIKeyService) Delete(id uint) error {
-	return model.DB().Delete(&model.APIKey{}, id).Error
+	return s.db.Delete(&model.APIKey{}, id).Error
 }
 
 func (s *APIKeyService) GetUsage(apiKeyID uint, days int) ([]APIKeyUsageResponse, error) {
@@ -181,7 +182,7 @@ func (s *APIKeyService) GetUsage(apiKeyID uint, days int) ([]APIKeyUsageResponse
 	}
 	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
 	var usages []model.APIUsage
-	if err := model.DB().Where("api_key_id = ? AND date >= ?", apiKeyID, since).
+	if err := s.db.Where("api_key_id = ? AND date >= ?", apiKeyID, since).
 		Order("date DESC").Find(&usages).Error; err != nil {
 		return nil, err
 	}

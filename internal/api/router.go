@@ -6,12 +6,16 @@ import (
 	"github.com/mirainya/nexus/console"
 	"github.com/mirainya/nexus/internal/api/handler"
 	"github.com/mirainya/nexus/internal/api/middleware"
+	"github.com/mirainya/nexus/internal/llm"
+	"github.com/mirainya/nexus/internal/service"
+	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/pkg/config"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
+	"gorm.io/gorm"
 )
 
-func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
+func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.Gateway) *gin.Engine {
 	cfg := config.C.Server.RateLimit
 	globalRate := cfg.GlobalRate
 	if globalRate <= 0 {
@@ -38,27 +42,42 @@ func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 	})
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	parseH := handler.NewParseHandler()
-	jobH := handler.NewJobHandler(asynqClient)
-	pipelineH := handler.NewPipelineHandler()
-	promptH := handler.NewPromptHandler()
-	reviewH := handler.NewReviewHandler()
-	entityH := handler.NewEntityHandler()
-	authH := handler.NewAuthHandler()
-	llmProviderH := handler.NewLLMProviderHandler()
+	// Services
+	parseSvc := service.NewParseService(db, gw)
+	jobSvc := service.NewJobService(db, asynqClient, hub, gw)
+	pipelineSvc := service.NewPipelineService(db)
+	promptSvc := service.NewPromptService(db)
+	reviewSvc := service.NewReviewService(db)
+	entitySvc := service.NewEntityService(db)
+	llmProviderSvc := service.NewLLMProviderService(db, gw)
+	searchSvc := service.NewSearchService(db, gw)
+	statsSvc := service.NewStatsService(db)
+	graphSvc := service.NewGraphService(db)
+	credentialSvc := service.NewCredentialService(db)
+	apiKeySvc := service.NewAPIKeyService(db)
+
+	// Handlers
+	parseH := handler.NewParseHandler(parseSvc)
+	jobH := handler.NewJobHandler(jobSvc)
+	pipelineH := handler.NewPipelineHandler(pipelineSvc)
+	promptH := handler.NewPromptHandler(promptSvc)
+	reviewH := handler.NewReviewHandler(reviewSvc)
+	entityH := handler.NewEntityHandler(entitySvc)
+	authH := handler.NewAuthHandler(db)
+	llmProviderH := handler.NewLLMProviderHandler(llmProviderSvc)
 	uploadH := handler.NewUploadHandler()
-	sseH := handler.NewSSEHandler()
-	searchH := handler.NewSearchHandler()
-	statsH := handler.NewStatsHandler()
-	graphH := handler.NewGraphHandler()
-	credentialH := handler.NewCredentialHandler()
-	apiKeyH := handler.NewAPIKeyHandler()
+	sseH := handler.NewSSEHandler(hub)
+	searchH := handler.NewSearchHandler(searchSvc)
+	statsH := handler.NewStatsHandler(statsSvc)
+	graphH := handler.NewGraphHandler(graphSvc)
+	credentialH := handler.NewCredentialHandler(credentialSvc)
+	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
 
 	// Auth (no middleware)
 	r.POST("/api/admin/auth/login", authH.Login)
 
 	// 对外 API（API Key 认证）
-	v1 := r.Group("/api/v1", middleware.APIKeyAuth(), middleware.QuotaCheck())
+	v1 := r.Group("/api/v1", middleware.APIKeyAuth(db), middleware.QuotaCheck(db))
 	{
 		v1.POST("/parse", parseH.Parse)
 		v1.POST("/jobs", jobH.Submit)

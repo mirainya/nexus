@@ -11,8 +11,8 @@ type ParseHandler struct {
 	svc *service.ParseService
 }
 
-func NewParseHandler() *ParseHandler {
-	return &ParseHandler{svc: service.NewParseService()}
+func NewParseHandler(svc *service.ParseService) *ParseHandler {
+	return &ParseHandler{svc: svc}
 }
 
 func (h *ParseHandler) Parse(c *gin.Context) {

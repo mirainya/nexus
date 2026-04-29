@@ -13,8 +13,8 @@ type SSEHandler struct {
 	hub *sse.Hub
 }
 
-func NewSSEHandler() *SSEHandler {
-	return &SSEHandler{hub: sse.Default()}
+func NewSSEHandler(hub *sse.Hub) *SSEHandler {
+	return &SSEHandler{hub: hub}
 }
 
 func (h *SSEHandler) Stream(c *gin.Context) {

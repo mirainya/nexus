@@ -10,9 +10,11 @@ import (
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
+	db       *gorm.DB
 	attempts sync.Map
 }
 
@@ -26,7 +28,7 @@ const (
 	loginLockout     = 15 * time.Minute
 )
 
-func NewAuthHandler() *AuthHandler { return &AuthHandler{} }
+func NewAuthHandler(db *gorm.DB) *AuthHandler { return &AuthHandler{db: db} }
 
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
@@ -54,7 +56,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	var user model.User
-	if err := model.DB().Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := h.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		h.recordAttempt(key)
 		resp.Unauthorized(c, errors.WithMessage(errors.ErrUnauthorized, "invalid credentials"))
 		return

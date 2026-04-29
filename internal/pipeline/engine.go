@@ -19,9 +19,25 @@ import (
 
 var ErrPartial = errors.New("pipeline completed with skipped steps")
 
-type Engine struct{}
+type PromptLoader func(id uint) (*model.PromptTemplate, error)
 
-func NewEngine() *Engine { return &Engine{} }
+type Engine struct {
+	LoadPrompt PromptLoader
+}
+
+func NewEngine(opts ...EngineOption) *Engine {
+	e := &Engine{}
+	for _, o := range opts {
+		o(e)
+	}
+	return e
+}
+
+type EngineOption func(*Engine)
+
+func WithPromptLoader(fn PromptLoader) EngineOption {
+	return func(e *Engine) { e.LoadPrompt = fn }
+}
 
 // Run executes all steps of a pipeline in order against the given context.
 func (e *Engine) Run(ctx context.Context, p *model.Pipeline, pctx *ProcessorContext, opts ...RunOption) error {
@@ -386,9 +402,10 @@ func (e *Engine) buildStepConfig(step model.PipelineStep, pctx *ProcessorContext
 				cond, _ := m["condition"].(string)
 				if EvalCondition(cond, pctx) {
 					if tid, ok := m["prompt_template_id"].(float64); ok {
-						var pt model.PromptTemplate
-						if model.DB().First(&pt, uint(tid)).Error == nil {
-							tmpl = &pt
+						if e.LoadPrompt != nil {
+							if pt, err := e.LoadPrompt(uint(tid)); err == nil {
+								tmpl = pt
+							}
 						}
 					}
 					break

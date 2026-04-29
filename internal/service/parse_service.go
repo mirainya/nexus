@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/mirainya/nexus/internal/llm"
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/internal/pipeline"
 	"github.com/mirainya/nexus/pkg/cache"
@@ -16,11 +17,13 @@ import (
 )
 
 type ParseService struct {
+	db     *gorm.DB
 	engine *pipeline.Engine
+	gw     *llm.Gateway
 }
 
-func NewParseService() *ParseService {
-	return &ParseService{engine: pipeline.NewEngine()}
+func NewParseService(db *gorm.DB, gw *llm.Gateway) *ParseService {
+	return &ParseService{db: db, engine: pipeline.NewEngine(), gw: gw}
 }
 
 type ParseRequest struct {
@@ -66,6 +69,8 @@ func (s *ParseService) Parse(ctx context.Context, req ParseRequest) (map[string]
 			SourceURL: req.SourceURL,
 			Metadata:  req.Metadata,
 		},
+		LLM: s.gw,
+		DB:  s.db,
 	}
 
 	if err := s.engine.Run(ctx, p, pctx); err != nil {
@@ -86,7 +91,7 @@ func (s *ParseService) Parse(ctx context.Context, req ParseRequest) (map[string]
 
 func (s *ParseService) loadPipeline(id uint) (*model.Pipeline, error) {
 	var p model.Pipeline
-	if err := model.DB().Preload("Steps", func(db *gorm.DB) *gorm.DB {
+	if err := s.db.Preload("Steps", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort_order ASC")
 	}).Preload("Steps.PromptTemplate").First(&p, id).Error; err != nil {
 		return nil, err

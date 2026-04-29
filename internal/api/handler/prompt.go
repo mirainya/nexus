@@ -12,8 +12,8 @@ type PromptHandler struct {
 	svc *service.PromptService
 }
 
-func NewPromptHandler() *PromptHandler {
-	return &PromptHandler{svc: service.NewPromptService()}
+func NewPromptHandler(svc *service.PromptService) *PromptHandler {
+	return &PromptHandler{svc: svc}
 }
 
 func (h *PromptHandler) Create(c *gin.Context) {

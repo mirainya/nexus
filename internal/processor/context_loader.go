@@ -20,7 +20,7 @@ func (p *ContextLoader) Process(_ context.Context, pctx *pipeline.ProcessorConte
 	}
 
 	var entities []model.Entity
-	model.DB().Limit(200).Find(&entities)
+	pctx.DB.Limit(200).Find(&entities)
 
 	var matched []map[string]any
 	for _, e := range entities {

@@ -13,8 +13,8 @@ type CredentialHandler struct {
 	svc *service.CredentialService
 }
 
-func NewCredentialHandler() *CredentialHandler {
-	return &CredentialHandler{svc: service.NewCredentialService()}
+func NewCredentialHandler(svc *service.CredentialService) *CredentialHandler {
+	return &CredentialHandler{svc: svc}
 }
 
 func (h *CredentialHandler) Create(c *gin.Context) {

@@ -22,14 +22,14 @@ func NewPipelineTask(jobID uint) (*asynq.Task, error) {
 	return asynq.NewTask(TypePipelineExecute, payload), nil
 }
 
-func HandlePipelineExecute(ctx context.Context, t *asynq.Task) error {
-	var p PipelinePayload
-	if err := json.Unmarshal(t.Payload(), &p); err != nil {
-		return fmt.Errorf("unmarshal payload: %w", err)
+func HandlePipelineExecute(jobSvc *service.JobService) asynq.HandlerFunc {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var p PipelinePayload
+		if err := json.Unmarshal(t.Payload(), &p); err != nil {
+			return fmt.Errorf("unmarshal payload: %w", err)
+		}
+
+		logger.Info("executing pipeline job", zap.Uint("job_id", p.JobID))
+		return jobSvc.Execute(ctx, p.JobID)
 	}
-
-	logger.Info("executing pipeline job", zap.Uint("job_id", p.JobID))
-
-	svc := service.NewJobService(nil)
-	return svc.Execute(ctx, p.JobID)
 }

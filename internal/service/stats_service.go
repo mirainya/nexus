@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/mirainya/nexus/internal/model"
+	"gorm.io/gorm"
 )
 
-type StatsService struct{}
+type StatsService struct{ db *gorm.DB }
 
-func NewStatsService() *StatsService { return &StatsService{} }
+func NewStatsService(db *gorm.DB) *StatsService { return &StatsService{db: db} }
 
 type DashboardStats struct {
 	Jobs       JobStats        `json:"jobs"`
@@ -48,7 +49,7 @@ type DailyTrendItem struct {
 }
 
 func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
-	db := model.DB()
+	db := s.db
 	stats := &DashboardStats{}
 
 	db.Model(&model.Job{}).Count(&stats.Jobs.Total)

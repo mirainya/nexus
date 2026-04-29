@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 
 	"github.com/mirainya/nexus/internal/model"
+	"gorm.io/gorm"
 )
 
-type ReviewService struct{}
+type ReviewService struct{ db *gorm.DB }
 
-func NewReviewService() *ReviewService { return &ReviewService{} }
+func NewReviewService(db *gorm.DB) *ReviewService { return &ReviewService{db: db} }
 
 func (s *ReviewService) List(status string, page, pageSize int) ([]model.Review, int64, error) {
 	var list []model.Review
 	var total int64
-	q := model.DB().Model(&model.Review{})
+	q := s.db.Model(&model.Review{})
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}
@@ -23,17 +24,17 @@ func (s *ReviewService) List(status string, page, pageSize int) ([]model.Review,
 }
 
 func (s *ReviewService) Approve(id uint, reviewer string) error {
-	return model.DB().Model(&model.Review{}).Where("id = ?", id).
+	return s.db.Model(&model.Review{}).Where("id = ?", id).
 		Updates(map[string]any{"status": "approved", "reviewer": reviewer}).Error
 }
 
 func (s *ReviewService) Reject(id uint, reviewer string) error {
-	return model.DB().Model(&model.Review{}).Where("id = ?", id).
+	return s.db.Model(&model.Review{}).Where("id = ?", id).
 		Updates(map[string]any{"status": "rejected", "reviewer": reviewer}).Error
 }
 
 func (s *ReviewService) Modify(id uint, reviewer string, data map[string]any) error {
 	modified, _ := json.Marshal(data)
-	return model.DB().Model(&model.Review{}).Where("id = ?", id).
+	return s.db.Model(&model.Review{}).Where("id = ?", id).
 		Updates(map[string]any{"status": "modified", "reviewer": reviewer, "modified_data": modified}).Error
 }

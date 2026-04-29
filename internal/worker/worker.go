@@ -2,6 +2,7 @@ package worker
 
 import (
 	"github.com/hibiken/asynq"
+	"github.com/mirainya/nexus/internal/service"
 	"github.com/mirainya/nexus/pkg/config"
 )
 
@@ -30,6 +31,6 @@ func NewClient() *asynq.Client {
 	})
 }
 
-func RegisterHandlers(mux *asynq.ServeMux) {
-	mux.HandleFunc(TypePipelineExecute, HandlePipelineExecute)
+func RegisterHandlers(mux *asynq.ServeMux, jobSvc *service.JobService) {
+	mux.HandleFunc(TypePipelineExecute, HandlePipelineExecute(jobSvc))
 }

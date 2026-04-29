@@ -13,8 +13,8 @@ type GraphHandler struct {
 	svc *service.GraphService
 }
 
-func NewGraphHandler() *GraphHandler {
-	return &GraphHandler{svc: service.NewGraphService()}
+func NewGraphHandler(svc *service.GraphService) *GraphHandler {
+	return &GraphHandler{svc: svc}
 }
 
 func (h *GraphHandler) GetGraph(c *gin.Context) {

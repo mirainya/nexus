@@ -12,8 +12,8 @@ type LLMProviderHandler struct {
 	svc *service.LLMProviderService
 }
 
-func NewLLMProviderHandler() *LLMProviderHandler {
-	return &LLMProviderHandler{svc: service.NewLLMProviderService()}
+func NewLLMProviderHandler(svc *service.LLMProviderService) *LLMProviderHandler {
+	return &LLMProviderHandler{svc: svc}
 }
 
 func (h *LLMProviderHandler) List(c *gin.Context) {

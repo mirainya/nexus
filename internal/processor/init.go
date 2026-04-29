@@ -73,9 +73,9 @@ func doChat(ctx context.Context, pctx *pipeline.ProcessorContext, req llm.Reques
 		if req.Model == "" {
 			req.Model = o.Model
 		}
-		return llm.G.ChatWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
+		return pctx.LLM.ChatWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
 	}
-	return llm.G.Chat(ctx, req)
+	return pctx.LLM.Chat(ctx, req)
 }
 
 func doEmbedding(ctx context.Context, pctx *pipeline.ProcessorContext, req llm.EmbeddingRequest) (*llm.EmbeddingResponse, error) {
@@ -86,7 +86,7 @@ func doEmbedding(ctx context.Context, pctx *pipeline.ProcessorContext, req llm.E
 		if req.Model == "" {
 			req.Model = o.Model
 		}
-		return llm.G.EmbeddingWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
+		return pctx.LLM.EmbeddingWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
 	}
-	return llm.G.Embedding(ctx, req)
+	return pctx.LLM.Embedding(ctx, req)
 }

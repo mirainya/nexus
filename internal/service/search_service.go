@@ -11,11 +11,17 @@ import (
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/logger"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
-type SearchService struct{}
+type SearchService struct {
+	db *gorm.DB
+	gw *llm.Gateway
+}
 
-func NewSearchService() *SearchService { return &SearchService{} }
+func NewSearchService(db *gorm.DB, gw *llm.Gateway) *SearchService {
+	return &SearchService{db: db, gw: gw}
+}
 
 type SearchRequest struct {
 	Query string `json:"query" binding:"required"`
@@ -104,7 +110,7 @@ const intentSystemPrompt = `你是一个查询意图解析器。将用户的自�
 
 func (s *SearchService) parseIntent(ctx context.Context, query string) ParsedQuery {
 	today := time.Now().Format("2006-01-02")
-	resp, err := llm.G.Chat(ctx, llm.Request{
+	resp, err := s.gw.Chat(ctx, llm.Request{
 		Messages: []llm.Message{
 			{Role: "system", Content: fmt.Sprintf(intentSystemPrompt, today)},
 			{Role: "user", Content: query},
@@ -138,7 +144,7 @@ type docRow struct {
 }
 
 func (s *SearchService) queryDocuments(pq ParsedQuery, limit int) ([]SearchItem, error) {
-	q := model.DB().Table("documents d").
+	q := s.db.Table("documents d").
 		Select("d.*, j.result as job_result").
 		Joins("LEFT JOIN jobs j ON j.document_id = d.id AND j.status = 'completed'").
 		Where("d.deleted_at IS NULL")
@@ -212,7 +218,7 @@ func (s *SearchService) loadEntitiesForDocs(docIDs []uint) map[uint][]EntityBrie
 		return nil
 	}
 	var entities []model.Entity
-	model.DB().Where("source_id IN ? AND deleted_at IS NULL", docIDs).Find(&entities)
+	s.db.Where("source_id IN ? AND deleted_at IS NULL", docIDs).Find(&entities)
 
 	m := make(map[uint][]EntityBrief)
 	for _, e := range entities {
@@ -258,7 +264,7 @@ func (s *SearchService) rerank(ctx context.Context, query string, pq ParsedQuery
 	}
 
 	prompt := fmt.Sprintf(rerankSystemPrompt, query, pq.Intent, sb.String(), topN)
-	resp, err := llm.G.Chat(ctx, llm.Request{
+	resp, err := s.gw.Chat(ctx, llm.Request{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
 		Temperature: 0,
 	})

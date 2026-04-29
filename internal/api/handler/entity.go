@@ -11,8 +11,8 @@ type EntityHandler struct {
 	svc *service.EntityService
 }
 
-func NewEntityHandler() *EntityHandler {
-	return &EntityHandler{svc: service.NewEntityService()}
+func NewEntityHandler(svc *service.EntityService) *EntityHandler {
+	return &EntityHandler{svc: svc}
 }
 
 func (h *EntityHandler) List(c *gin.Context) {

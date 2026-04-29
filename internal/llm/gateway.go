@@ -12,9 +12,11 @@ import (
 	"github.com/mirainya/nexus/pkg/logger"
 	"github.com/mirainya/nexus/pkg/metrics"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type Gateway struct {
+	db         *gorm.DB
 	providers  map[string]Provider
 	defaults   map[string]string
 	pricing    map[string][2]float64
@@ -25,8 +27,9 @@ type Gateway struct {
 
 var G *Gateway
 
-func Init() {
+func Init(db *gorm.DB) {
 	G = &Gateway{
+		db:         db,
 		providers:  make(map[string]Provider),
 		defaults:   make(map[string]string),
 		pricing:    make(map[string][2]float64),
@@ -40,7 +43,7 @@ func (g *Gateway) LoadFromDB() {
 	defer g.mu.Unlock()
 
 	var list []model.LLMProvider
-	model.DB().Where("active = ?", true).Find(&list)
+	g.db.Where("active = ?", true).Find(&list)
 
 	g.providers = make(map[string]Provider)
 	g.defaults = make(map[string]string)

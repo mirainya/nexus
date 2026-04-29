@@ -1,6 +1,11 @@
 package pipeline
 
-import "context"
+import (
+	"context"
+
+	"github.com/mirainya/nexus/internal/llm"
+	"gorm.io/gorm"
+)
 
 // ProcessorContext is the data passed between pipeline steps.
 type ProcessorContext struct {
@@ -14,6 +19,8 @@ type ProcessorContext struct {
 	SourceImageURL string                 `json:"-"`
 	ImageBase64    string                 `json:"-"`
 	LLMOverride    *LLMOverrideConfig     `json:"-"`
+	LLM            *llm.Gateway           `json:"-"`
+	DB             *gorm.DB               `json:"-"`
 }
 
 type LLMOverrideConfig struct {

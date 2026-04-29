@@ -13,15 +13,18 @@ import (
 	"gorm.io/gorm"
 )
 
+var testDB *gorm.DB
+
 func TestMain(m *testing.M) {
 	config.C = &config.Config{}
 	logger.Init()
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	var err error
+	testDB, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		panic("failed to open test db: " + err.Error())
 	}
-	db.AutoMigrate(
+	testDB.AutoMigrate(
 		&model.User{},
 		&model.APIKey{},
 		&model.PromptTemplate{},
@@ -35,7 +38,7 @@ func TestMain(m *testing.M) {
 		&model.Review{},
 		&model.LLMProvider{},
 	)
-	model.SetDB(db)
+	model.SetDB(testDB)
 
 	os.Exit(m.Run())
 }
@@ -43,7 +46,7 @@ func TestMain(m *testing.M) {
 func seedPipeline(t *testing.T) model.Pipeline {
 	t.Helper()
 	p := model.Pipeline{Name: t.Name(), Active: true}
-	if err := model.DB().Create(&p).Error; err != nil {
+	if err := testDB.Create(&p).Error; err != nil {
 		t.Fatalf("seed pipeline: %v", err)
 	}
 	return p
@@ -51,7 +54,7 @@ func seedPipeline(t *testing.T) model.Pipeline {
 
 func TestJobService_Submit(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job, err := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -72,7 +75,7 @@ func TestJobService_Submit(t *testing.T) {
 	}
 
 	var doc model.Document
-	if err := model.DB().First(&doc, job.DocumentID).Error; err != nil {
+	if err := testDB.First(&doc, job.DocumentID).Error; err != nil {
 		t.Fatalf("document not created: %v", err)
 	}
 	if doc.Content != "hello world" {
@@ -82,7 +85,7 @@ func TestJobService_Submit(t *testing.T) {
 
 func TestJobService_Submit_CacheHit(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job1, err := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -92,7 +95,7 @@ func TestJobService_Submit_CacheHit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("submit 1: %v", err)
 	}
-	model.DB().Model(job1).Update("status", "completed")
+	testDB.Model(job1).Update("status", "completed")
 
 	job2, err := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -109,7 +112,7 @@ func TestJobService_Submit_CacheHit(t *testing.T) {
 
 func TestJobService_Submit_SkipCache(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job1, err := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -119,7 +122,7 @@ func TestJobService_Submit_SkipCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("submit 1: %v", err)
 	}
-	model.DB().Model(job1).Update("status", "completed")
+	testDB.Model(job1).Update("status", "completed")
 
 	job2, err := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -137,7 +140,7 @@ func TestJobService_Submit_SkipCache(t *testing.T) {
 
 func TestJobService_GetByUUID(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job, _ := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -155,7 +158,7 @@ func TestJobService_GetByUUID(t *testing.T) {
 }
 
 func TestJobService_GetByUUID_NotFound(t *testing.T) {
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 	_, err := svc.GetByUUID("nonexistent-uuid")
 	if err == nil {
 		t.Error("expected error for nonexistent UUID")
@@ -164,7 +167,7 @@ func TestJobService_GetByUUID_NotFound(t *testing.T) {
 
 func TestJobService_Retry_OnlyFailed(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job, _ := svc.Submit(JobSubmitRequest{
 		Type:       "text",
@@ -177,7 +180,7 @@ func TestJobService_Retry_OnlyFailed(t *testing.T) {
 		t.Error("expected error when retrying non-failed job")
 	}
 
-	model.DB().Model(job).Update("status", "failed")
+	testDB.Model(job).Update("status", "failed")
 	retried, err := svc.Retry(job.ID)
 	if err != nil {
 		t.Fatalf("retry failed job: %v", err)
@@ -189,7 +192,7 @@ func TestJobService_Retry_OnlyFailed(t *testing.T) {
 
 func TestJobService_List(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	for i := 0; i < 5; i++ {
 		svc.Submit(JobSubmitRequest{
@@ -213,14 +216,14 @@ func TestJobService_List(t *testing.T) {
 
 func TestJobService_List_FilterByStatus(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	job, _ := svc.Submit(JobSubmitRequest{
 		Type:       "text",
 		Content:    "filter test",
 		PipelineID: p.ID,
 	})
-	model.DB().Model(job).Update("status", "completed")
+	testDB.Model(job).Update("status", "completed")
 
 	jobs, _, err := svc.List(1, 100, "completed")
 	if err != nil {
@@ -235,10 +238,10 @@ func TestJobService_List_FilterByStatus(t *testing.T) {
 
 func TestJobService_PersistResults(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	doc := model.Document{UUID: "persist-test", Type: "text", Content: "test", Status: "pending"}
-	model.DB().Create(&doc)
+	testDB.Create(&doc)
 
 	_ = p
 
@@ -258,13 +261,13 @@ func TestJobService_PersistResults(t *testing.T) {
 	}
 
 	var entities []model.Entity
-	model.DB().Where("source_id = ?", doc.ID).Find(&entities)
+	testDB.Where("source_id = ?", doc.ID).Find(&entities)
 	if len(entities) != 2 {
 		t.Fatalf("expected 2 entities, got %d", len(entities))
 	}
 
 	var relations []model.Relation
-	model.DB().Where("source_id = ?", doc.ID).Find(&relations)
+	testDB.Where("source_id = ?", doc.ID).Find(&relations)
 	if len(relations) != 1 {
 		t.Fatalf("expected 1 relation, got %d", len(relations))
 	}
@@ -273,7 +276,7 @@ func TestJobService_PersistResults(t *testing.T) {
 	}
 
 	var reviews []model.Review
-	model.DB().Where("entity_id IN ?", []uint{entities[0].ID, entities[1].ID}).Find(&reviews)
+	testDB.Where("entity_id IN ?", []uint{entities[0].ID, entities[1].ID}).Find(&reviews)
 	if len(reviews) != 2 {
 		t.Errorf("expected 2 reviews, got %d", len(reviews))
 	}
@@ -281,9 +284,9 @@ func TestJobService_PersistResults(t *testing.T) {
 
 func TestJobService_PersistResults_ExistingEntity(t *testing.T) {
 	doc := model.Document{UUID: "persist-existing-test", Type: "text", Content: "test", Status: "pending"}
-	model.DB().Create(&doc)
+	testDB.Create(&doc)
 
-	svc := NewJobService(nil)
+	svc := NewJobService(testDB, nil, nil, nil)
 
 	aliasesJSON, _ := json.Marshal([]string{"Robert"})
 	existing := model.Entity{
@@ -294,7 +297,7 @@ func TestJobService_PersistResults_ExistingEntity(t *testing.T) {
 		Confidence: 0.80,
 		SourceID:   doc.ID,
 	}
-	model.DB().Create(&existing)
+	testDB.Create(&existing)
 
 	pctx := &pipeline.ProcessorContext{
 		Entities: []pipeline.EntityData{
@@ -314,7 +317,7 @@ func TestJobService_PersistResults_ExistingEntity(t *testing.T) {
 	}
 
 	var updated model.Entity
-	model.DB().First(&updated, existing.ID)
+	testDB.First(&updated, existing.ID)
 	if updated.Confidence != 0.95 {
 		t.Errorf("expected confidence 0.95, got %f", updated.Confidence)
 	}

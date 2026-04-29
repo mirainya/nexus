@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mirainya/nexus/internal/api/middleware"
 	"github.com/mirainya/nexus/internal/model"
+	"github.com/mirainya/nexus/internal/service"
 	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +21,7 @@ import (
 )
 
 var testRouter *gin.Engine
+var testDB *gorm.DB
 
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
@@ -32,6 +34,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to open test db: " + err.Error())
 	}
+	testDB = db
 	db.AutoMigrate(
 		&model.User{},
 		&model.APIKey{},
@@ -61,9 +64,9 @@ func TestMain(m *testing.M) {
 func setupTestRouter() *gin.Engine {
 	r := gin.New()
 
-	authH := NewAuthHandler()
-	jobH := NewJobHandler(nil)
-	pipelineH := NewPipelineHandler()
+	authH := NewAuthHandler(testDB)
+	jobH := NewJobHandler(service.NewJobService(testDB, nil, nil, nil))
+	pipelineH := NewPipelineHandler(service.NewPipelineService(testDB))
 
 	r.POST("/api/admin/auth/login", authH.Login)
 
