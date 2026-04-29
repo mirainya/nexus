@@ -14,6 +14,7 @@ import (
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/internal/pipeline"
 	"github.com/mirainya/nexus/internal/sse"
+	"github.com/mirainya/nexus/pkg/cache"
 	"github.com/mirainya/nexus/pkg/logger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -228,6 +229,12 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 	model.DB().Model(&job).Updates(map[string]any{"status": "completed", "result": result})
 	model.DB().Model(&doc).Update("status", "completed")
 	sse.Default().Publish(job.UUID, sse.Event{Type: "completed", Data: pipeline.BuildResult(pctx)})
+
+	if cache.Available() && job.ContentHash != "" {
+		cacheKey := "nexus:parse:" + job.ContentHash
+		cache.Set(ctx, cacheKey, string(result), 24*time.Hour)
+	}
+
 	return nil
 }
 

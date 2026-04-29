@@ -1,6 +1,18 @@
 package llm
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
+
+type RateLimitError struct {
+	Provider   string
+	RetryAfter int // seconds, 0 if unknown
+}
+
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("rate limit exceeded for provider %s", e.Provider)
+}
 
 type ContentPart struct {
 	Type     string    `json:"type"`

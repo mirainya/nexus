@@ -28,12 +28,13 @@ func (s *LLMProviderService) Create(p *model.LLMProvider) error {
 
 func (s *LLMProviderService) Update(p *model.LLMProvider) error {
 	updates := map[string]any{
-		"display_name":  p.DisplayName,
-		"base_url":      p.BaseURL,
-		"default_model": p.DefaultModel,
-		"input_price":   p.InputPrice,
-		"output_price":  p.OutputPrice,
-		"active":        p.Active,
+		"display_name":    p.DisplayName,
+		"base_url":        p.BaseURL,
+		"default_model":   p.DefaultModel,
+		"input_price":     p.InputPrice,
+		"output_price":    p.OutputPrice,
+		"max_concurrency": p.MaxConcurrency,
+		"active":          p.Active,
 	}
 	if p.APIKey != "" {
 		updates["api_key"] = p.APIKey

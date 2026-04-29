@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,13 +19,18 @@ import (
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/internal/processor"
 	"github.com/mirainya/nexus/internal/service"
+	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/internal/worker"
+	"github.com/mirainya/nexus/pkg/cache"
 	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/database"
 	"github.com/mirainya/nexus/pkg/logger"
 )
 
 func main() {
+	mode := flag.String("mode", "all", "run mode: api, worker, all")
+	flag.Parse()
+
 	cwd, _ := os.Getwd()
 	configPaths := []string{
 		filepath.Join(cwd, "configs", "config.yaml"),
@@ -67,39 +73,60 @@ func main() {
 	}
 
 	llm.Init()
+	cache.Init()
+	sse.Init()
 	processor.Init()
+
+	runAPI := *mode == "all" || *mode == "api"
+	runWorker := *mode == "all" || *mode == "worker"
 
 	var workerSrv *asynq.Server
 	var asynqClient *asynq.Client
+
 	if config.C.Redis.Addr != "" {
 		asynqClient = worker.NewClient()
-		workerSrv = startWorker()
-		if err := service.NewJobService(asynqClient).RecoverStalled(); err != nil {
-			log.Fatalf("failed to recover stalled jobs: %v", err)
+		if runWorker {
+			workerSrv = startWorker()
+			if err := service.NewJobService(asynqClient).RecoverStalled(); err != nil {
+				log.Fatalf("failed to recover stalled jobs: %v", err)
+			}
 		}
 	} else {
 		logger.Info("redis not configured, worker disabled")
 	}
 
-	r := api.SetupRouter(asynqClient)
-	console.RegisterRoutes(r)
-	addr := fmt.Sprintf(":%d", config.C.Server.Port)
-	httpSrv := &http.Server{Addr: addr, Handler: r}
+	var httpSrv *http.Server
+	if runAPI {
+		r := api.SetupRouter(asynqClient)
+		console.RegisterRoutes(r)
+		addr := fmt.Sprintf(":%d", config.C.Server.Port)
+		httpSrv = &http.Server{Addr: addr, Handler: r}
 
-	go func() {
-		logger.Info("server starting on " + addr)
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("failed to start server: %v", err)
-		}
-	}()
+		go func() {
+			logger.Info("server starting on " + addr + " (mode: " + *mode + ")")
+			if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("failed to start server: %v", err)
+			}
+		}()
+	}
+
+	if !runAPI && !runWorker {
+		log.Fatalf("invalid mode: %s (must be api, worker, or all)", *mode)
+	}
+
+	if !runAPI && runWorker {
+		logger.Info("worker-only mode started")
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	httpSrv.Shutdown(ctx)
+	if httpSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		httpSrv.Shutdown(ctx)
+	}
 
 	if workerSrv != nil {
 		workerDone := make(chan struct{})

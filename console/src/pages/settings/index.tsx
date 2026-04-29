@@ -15,11 +15,12 @@ interface LLMProvider {
   default_model: string;
   input_price: number;
   output_price: number;
+  max_concurrency: number;
   active: boolean;
   is_default: boolean;
 }
 
-const emptyForm = { name: '', display_name: '', base_url: '', api_key: '', default_model: '', input_price: '', output_price: '', active: true };
+const emptyForm = { name: '', display_name: '', base_url: '', api_key: '', default_model: '', input_price: '', output_price: '', max_concurrency: '10', active: true };
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -37,7 +38,7 @@ export default function SettingsPage() {
 
   const saveMut = useMutation({
     mutationFn: (d: any) => {
-      const payload = { ...d, input_price: parseFloat(d.input_price) || 0, output_price: parseFloat(d.output_price) || 0 };
+      const payload = { ...d, input_price: parseFloat(d.input_price) || 0, output_price: parseFloat(d.output_price) || 0, max_concurrency: parseInt(d.max_concurrency) || 10 };
       return editId ? llmProviderApi.update(editId, payload) : llmProviderApi.create(payload);
     },
     onSuccess: () => { reload(); setShowForm(false); setEditId(null); toast.success('已保存'); },
@@ -58,7 +59,7 @@ export default function SettingsPage() {
 
   const openEdit = (p: LLMProvider) => {
     setEditId(p.id);
-    setForm({ name: p.name, display_name: p.display_name, base_url: p.base_url, api_key: '', default_model: p.default_model, input_price: p.input_price?.toString() || '', output_price: p.output_price?.toString() || '', active: p.active });
+    setForm({ name: p.name, display_name: p.display_name, base_url: p.base_url, api_key: '', default_model: p.default_model, input_price: p.input_price?.toString() || '', output_price: p.output_price?.toString() || '', max_concurrency: p.max_concurrency?.toString() || '10', active: p.active });
     setShowForm(true);
   };
 
@@ -153,6 +154,11 @@ export default function SettingsPage() {
                   <input type="number" step="0.01" value={form.output_price} onChange={e => setForm({ ...form, output_price: e.target.value })} placeholder="0.00"
                     className="w-full px-4 py-2.5 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 font-mono" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">最大并发数</label>
+                <input type="number" min="1" max="100" value={form.max_concurrency} onChange={e => setForm({ ...form, max_concurrency: e.target.value })} placeholder="10"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 font-mono" />
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })}

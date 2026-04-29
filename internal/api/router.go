@@ -6,16 +6,18 @@ import (
 	"github.com/mirainya/nexus/console"
 	"github.com/mirainya/nexus/internal/api/handler"
 	"github.com/mirainya/nexus/internal/api/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 	rl := middleware.NewRateLimiter(100, 200, 10, 20)
 	r := gin.New()
-	r.Use(middleware.RequestID(), middleware.CORS(), rl.Middleware(), middleware.Logger(), gin.Recovery())
+	r.Use(middleware.RequestID(), middleware.CORS(), rl.Middleware(), middleware.Metrics(), middleware.Logger(), gin.Recovery())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	parseH := handler.NewParseHandler()
 	jobH := handler.NewJobHandler(asynqClient)

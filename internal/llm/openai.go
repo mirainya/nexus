@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -61,6 +62,10 @@ func (p *OpenAIProvider) Chat(ctx context.Context, req Request) (*Response, erro
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		return nil, &RateLimitError{Provider: "openai", RetryAfter: retryAfter}
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("openai api error %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -117,6 +122,10 @@ func (p *OpenAIProvider) Embedding(ctx context.Context, req EmbeddingRequest) (*
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		return nil, &RateLimitError{Provider: "openai", RetryAfter: retryAfter}
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("openai embedding api error %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -158,6 +167,10 @@ func (p *OpenAIProvider) ListModels(ctx context.Context) ([]ModelInfo, error) {
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		return nil, &RateLimitError{Provider: "openai", RetryAfter: retryAfter}
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("openai models api error %d: %s", resp.StatusCode, string(respBody))
 	}

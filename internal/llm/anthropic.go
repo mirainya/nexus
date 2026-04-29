@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -92,6 +93,10 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req Request) (*Response, e
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		return nil, &RateLimitError{Provider: "anthropic", RetryAfter: retryAfter}
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("anthropic api error %d: %s", resp.StatusCode, string(respBody))
 	}
