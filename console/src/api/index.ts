@@ -16,6 +16,8 @@ import type {
   LLMProviderCreateRequest,
   ModelInfo,
   PaginatedData,
+  DashboardStats,
+  GraphData,
 } from './types';
 
 const api = axios.create({
@@ -108,4 +110,12 @@ export const uploadApi = {
 
 export const searchApi = {
   search: (query: string) => api.post('/admin/search', { query }),
+};
+
+export const statsApi = {
+  dashboard: () => api.get<unknown, DashboardStats>('/admin/stats'),
+};
+
+export const graphApi = {
+  getData: (limit?: number) => api.get<unknown, GraphData>('/admin/graph', { params: { limit } }),
 };

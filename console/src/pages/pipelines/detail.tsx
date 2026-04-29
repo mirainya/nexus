@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft, Plus, GripVertical, Trash2, Pencil, Check, X } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { PageHeader, Card, Button, Badge, Loading } from '../../components/UI';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
@@ -94,6 +97,112 @@ function ProviderModelSelect({ provider, model, onProviderChange, onModelChange 
   );
 }
 
+function SortableStepCard({ step, index, editingStep, editStepForm, setEditStepForm, setEditingStep, openEditStep, setDeleteStepId, updateStepMut, buildSubmitData, prompts }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card>
+        {editingStep === step.id ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">处理器</label>
+                <select
+                  value={editStepForm.processor_type}
+                  onChange={e => setEditStepForm({ ...editStepForm, processor_type: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
+                >
+                  {processorTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">提示词模板</label>
+                <select
+                  value={editStepForm.prompt_template_id ?? ''}
+                  onChange={e => setEditStepForm({ ...editStepForm, prompt_template_id: e.target.value ? Number(e.target.value) : null })}
+                  className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
+                >
+                  <option value="">无（使用默认）</option>
+                  {prompts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+            {llmProcessors.includes(editStepForm.processor_type) && (
+              <ProviderModelSelect
+                provider={editStepForm.provider}
+                model={editStepForm.model}
+                onProviderChange={v => setEditStepForm({ ...editStepForm, provider: v })}
+                onModelChange={v => setEditStepForm({ ...editStepForm, model: v })}
+              />
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">条件</label>
+                <input
+                  value={editStepForm.condition}
+                  onChange={e => setEditStepForm({ ...editStepForm, condition: e.target.value })}
+                  placeholder="例如 type=image"
+                  className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">其他配置 (JSON)</label>
+                <input
+                  value={editStepForm.config}
+                  onChange={e => setEditStepForm({ ...editStepForm, config: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 font-mono"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditingStep(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => updateStepMut.mutate({ stepId: step.id, data: buildSubmitData(editStepForm) })}
+                className="p-1.5 rounded-lg hover:bg-nexus-50 text-nexus-400 hover:text-nexus-600 transition-all"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <div {...attributes} {...listeners}>
+              <GripVertical className="w-4 h-4 text-gray-300 cursor-grab" />
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-nexus-50 flex items-center justify-center text-xs font-medium text-nexus-600">
+              {index + 1}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">{step.processor_type}</span>
+                {step.prompt_template && <Badge variant="info">{step.prompt_template.name}</Badge>}
+                {step.condition && <Badge variant="default">条件: {step.condition}</Badge>}
+                {step.config?.provider && <Badge variant="default">{step.config.provider}{step.config.model ? ` / ${step.config.model}` : ''}</Badge>}
+              </div>
+            </div>
+            <button
+              onClick={() => openEditStep(step)}
+              className="p-1.5 rounded-lg hover:bg-nexus-50 text-gray-300 hover:text-nexus-400 transition-all"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setDeleteStepId(step.id)}
+              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 export default function PipelineDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -153,10 +262,30 @@ export default function PipelineDetailPage() {
     onError: () => { setDeleteStepId(null); toast.error('删除失败'); },
   });
 
+  const reorderMut = useMutation({
+    mutationFn: (stepIds: number[]) => pipelineApi.reorderSteps(Number(id), stepIds),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pipeline', id] }),
+    onError: () => toast.error('排序失败'),
+  });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   if (isLoading) return <Loading />;
   if (!pipeline) return null;
 
   const steps = pipeline.steps ?? [];
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = steps.findIndex((s: any) => s.id === active.id);
+    const newIndex = steps.findIndex((s: any) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...steps];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    reorderMut.mutate(reordered.map((s: any) => s.id));
+  };
 
   const buildSubmitData = (form: StepFormData) => {
     const configStr = llmProcessors.includes(form.processor_type)
@@ -226,104 +355,15 @@ export default function PipelineDetailPage() {
         />
       )}
 
-      <div className="space-y-3">
-        {steps.map((step: any, i: number) => (
-          <Card key={step.id}>
-            {editingStep === step.id ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">处理器</label>
-                    <select
-                      value={editStepForm.processor_type}
-                      onChange={e => setEditStepForm({ ...editStepForm, processor_type: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
-                    >
-                      {processorTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">提示词模板</label>
-                    <select
-                      value={editStepForm.prompt_template_id ?? ''}
-                      onChange={e => setEditStepForm({ ...editStepForm, prompt_template_id: e.target.value ? Number(e.target.value) : null })}
-                      className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
-                    >
-                      <option value="">无（使用默认）</option>
-                      {prompts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                {llmProcessors.includes(editStepForm.processor_type) && (
-                  <ProviderModelSelect
-                    provider={editStepForm.provider}
-                    model={editStepForm.model}
-                    onProviderChange={v => setEditStepForm({ ...editStepForm, provider: v })}
-                    onModelChange={v => setEditStepForm({ ...editStepForm, model: v })}
-                  />
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">条件</label>
-                    <input
-                      value={editStepForm.condition}
-                      onChange={e => setEditStepForm({ ...editStepForm, condition: e.target.value })}
-                      placeholder="例如 type=image"
-                      className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">其他配置 (JSON)</label>
-                    <input
-                      value={editStepForm.config}
-                      onChange={e => setEditStepForm({ ...editStepForm, config: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 font-mono"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setEditingStep(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all">
-                    <X className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => updateStepMut.mutate({ stepId: step.id, data: buildSubmitData(editStepForm) })}
-                    className="p-1.5 rounded-lg hover:bg-nexus-50 text-nexus-400 hover:text-nexus-600 transition-all"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <GripVertical className="w-4 h-4 text-gray-300 cursor-grab" />
-                <div className="w-8 h-8 rounded-lg bg-nexus-50 flex items-center justify-center text-xs font-medium text-nexus-600">
-                  {i + 1}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">{step.processor_type}</span>
-                    {step.prompt_template && <Badge variant="info">{step.prompt_template.name}</Badge>}
-                    {step.condition && <Badge variant="default">条件: {step.condition}</Badge>}
-                    {step.config?.provider && <Badge variant="default">{step.config.provider}{step.config.model ? ` / ${step.config.model}` : ''}</Badge>}
-                  </div>
-                </div>
-                <button
-                  onClick={() => openEditStep(step)}
-                  className="p-1.5 rounded-lg hover:bg-nexus-50 text-gray-300 hover:text-nexus-400 transition-all"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setDeleteStepId(step.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={steps.map((s: any) => s.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {steps.map((step: any, i: number) => (
+              <SortableStepCard key={step.id} step={step} index={i} editingStep={editingStep} editStepForm={editStepForm} setEditStepForm={setEditStepForm} setEditingStep={setEditingStep} openEditStep={openEditStep} setDeleteStepId={setDeleteStepId} updateStepMut={updateStepMut} buildSubmitData={buildSubmitData} prompts={prompts} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {steps.length === 0 && (
         <Card className="text-center py-12">

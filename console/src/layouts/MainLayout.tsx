@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, GitBranch, MessageSquareText, ListTodo,
-  CheckCircle, Database, Settings, LogOut, Sparkles, FlaskConical, Search
+  CheckCircle, Database, Settings, LogOut, Sparkles, FlaskConical, Search, Share2
 } from 'lucide-react';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/jobs', icon: ListTodo, label: '任务' },
   { to: '/reviews', icon: CheckCircle, label: '审核' },
   { to: '/entities', icon: Database, label: '实体' },
+  { to: '/graph', icon: Share2, label: '图谱' },
   { to: '/search', icon: Search, label: '搜索推荐' },
   { to: '/playground', icon: FlaskConical, label: '测试' },
   { to: '/settings', icon: Settings, label: '设置' },

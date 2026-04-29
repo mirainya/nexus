@@ -204,9 +204,53 @@ export interface RecommendItem {
   tags?: string[];
 }
 
+// Dashboard Stats
+export interface DashboardStats {
+  jobs: {
+    total: number;
+    completed: number;
+    failed: number;
+    running: number;
+    pending: number;
+  };
+  llm: {
+    total_tokens: number;
+    total_cost: number;
+  };
+  entities: {
+    total: number;
+    distribution: { type: string; count: number }[];
+  };
+  daily_trend: {
+    date: string;
+    total: number;
+    completed: number;
+    failed: number;
+  }[];
+}
+
 // Search
 export interface SearchRequest {
   query: string;
+}
+
+// Graph
+export interface GraphNode {
+  id: number;
+  label: string;
+  type: string;
+  confidence: number;
+}
+
+export interface GraphEdge {
+  source: number;
+  target: number;
+  type: string;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 }
 
 // Upload

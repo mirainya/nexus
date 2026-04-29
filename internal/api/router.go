@@ -49,6 +49,8 @@ func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 	uploadH := handler.NewUploadHandler()
 	sseH := handler.NewSSEHandler()
 	searchH := handler.NewSearchHandler()
+	statsH := handler.NewStatsHandler()
+	graphH := handler.NewGraphHandler()
 
 	// Auth (no middleware)
 	r.POST("/api/admin/auth/login", authH.Login)
@@ -109,6 +111,10 @@ func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 		admin.POST("/upload", uploadH.Upload)
 
 		admin.POST("/search", searchH.Search)
+
+		admin.GET("/stats", statsH.Dashboard)
+
+		admin.GET("/graph", graphH.GetGraph)
 	}
 
 	console.RegisterRoutes(r)

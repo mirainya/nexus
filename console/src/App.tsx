@@ -13,6 +13,7 @@ import EntitiesPage from './pages/entities';
 import SettingsPage from './pages/settings';
 import PlaygroundPage from './pages/playground';
 import SearchPage from './pages/search';
+import GraphPage from './pages/graph';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="jobs" element={<JobsPage />} />
               <Route path="reviews" element={<ReviewsPage />} />
               <Route path="entities" element={<EntitiesPage />} />
+              <Route path="graph" element={<GraphPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="playground" element={<PlaygroundPage />} />
               <Route path="search" element={<SearchPage />} />
