@@ -23,6 +23,7 @@ func AutoMigrate() error {
 		&LLMProvider{},
 		&Credential{},
 		&APIUsage{},
+		&WebhookLog{},
 	)
 }
 

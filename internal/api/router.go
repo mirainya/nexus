@@ -57,6 +57,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	credentialSvc := service.NewCredentialService(db)
 	apiKeySvc := service.NewAPIKeyService(db)
 	recommendSvc := service.NewRecommendService(db)
+	webhookSvc := service.NewWebhookService(db)
 
 	// Handlers
 	parseH := handler.NewParseHandler(parseSvc)
@@ -74,6 +75,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	graphH := handler.NewGraphHandler(graphSvc)
 	credentialH := handler.NewCredentialHandler(credentialSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
+	webhookH := handler.NewWebhookHandler(webhookSvc)
 
 	// Auth (no middleware)
 	r.POST("/api/admin/auth/login", authH.Login)
@@ -152,6 +154,8 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 		admin.PUT("/api-keys/:id", apiKeyH.Update)
 		admin.DELETE("/api-keys/:id", apiKeyH.Delete)
 		admin.GET("/api-keys/:id/usage", apiKeyH.Usage)
+
+		admin.GET("/webhooks", webhookH.List)
 	}
 
 	console.RegisterRoutes(r)

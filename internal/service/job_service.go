@@ -15,6 +15,7 @@ import (
 	"github.com/mirainya/nexus/internal/pipeline"
 	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/pkg/cache"
+	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/logger"
 	"github.com/mirainya/nexus/pkg/vectordb"
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ type JobService struct {
 	gw          *llm.Gateway
 	persister   *ResultPersister
 	tracker     *UsageTracker
+	webhook     *WebhookService
 }
 
 func NewJobService(db *gorm.DB, client *asynq.Client, hub *sse.Hub, gw *llm.Gateway) *JobService {
@@ -40,6 +42,7 @@ func NewJobService(db *gorm.DB, client *asynq.Client, hub *sse.Hub, gw *llm.Gate
 		gw:          gw,
 		persister:   NewResultPersister(db),
 		tracker:     NewUsageTracker(db),
+		webhook:     NewWebhookService(db),
 	}
 }
 
@@ -282,12 +285,14 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 				}
 			}
 			s.hub.Publish(job.UUID, sse.Event{Type: "completed", Data: "partial"})
+			s.fireWebhook(job, "job.partial", pipeline.BuildResult(pctx), "")
 			return nil
 		}
 		if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": err.Error()}).Error; dbErr != nil {
 			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 		}
 		s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: err.Error()})
+		s.fireWebhook(job, "job.failed", nil, err.Error())
 		return err
 	}
 
@@ -296,6 +301,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 		}
 		s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: "persist results: " + err.Error()})
+		s.fireWebhook(job, "job.failed", nil, "persist results: "+err.Error())
 		return err
 	}
 
@@ -307,6 +313,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		logger.Warn("failed to update doc status", zap.Uint("doc_id", doc.ID), zap.Error(dbErr))
 	}
 	s.hub.Publish(job.UUID, sse.Event{Type: "completed", Data: pipeline.BuildResult(pctx)})
+	s.fireWebhook(job, "job.completed", pipeline.BuildResult(pctx), "")
 
 	if cache.Available() && job.ContentHash != "" {
 		cacheKey := "nexus:parse:" + job.ContentHash
@@ -379,6 +386,21 @@ func (s *JobService) enqueueRecovered(jobID uint) error {
 	task := asynq.NewTask("pipeline:execute", payload)
 	_, err := s.asynqClient.Enqueue(task)
 	return err
+}
+
+func (s *JobService) fireWebhook(job model.Job, event string, result any, errMsg string) {
+	if job.CallbackURL == "" {
+		return
+	}
+	go s.webhook.Send(job.CallbackURL, WebhookPayload{
+		Event:     event,
+		JobID:     job.ID,
+		JobUUID:   job.UUID,
+		Status:    job.Status,
+		Result:    result,
+		Error:     errMsg,
+		Timestamp: time.Now().Unix(),
+	}, config.C.Server.JWTSecret)
 }
 
 func (s *JobService) List(page, pageSize int, status string) ([]model.Job, int64, error) {
