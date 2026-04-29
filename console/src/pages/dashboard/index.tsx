@@ -65,7 +65,7 @@ function EntityPieChart({ data }: { data: DashboardStats['entities']['distributi
       <h3 className="text-sm font-medium text-gray-600 mb-4">实体类型分布</h3>
       <ResponsiveContainer width="100%" height={260}>
         <PieChart>
-          <Pie data={merged} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={90} label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}>
+          <Pie data={merged} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={90} label={(props) => `${props.name ?? ''} ${((props.percent ?? 0) * 100).toFixed(0)}%`}>
             {merged.map((_, i) => (
               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}

@@ -55,10 +55,11 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	graphSvc := service.NewGraphService(db)
 	credentialSvc := service.NewCredentialService(db)
 	apiKeySvc := service.NewAPIKeyService(db)
+	recommendSvc := service.NewRecommendService(db)
 
 	// Handlers
 	parseH := handler.NewParseHandler(parseSvc)
-	jobH := handler.NewJobHandler(jobSvc)
+	jobH := handler.NewJobHandler(jobSvc, recommendSvc)
 	pipelineH := handler.NewPipelineHandler(pipelineSvc)
 	promptH := handler.NewPromptHandler(promptSvc)
 	reviewH := handler.NewReviewHandler(reviewSvc)

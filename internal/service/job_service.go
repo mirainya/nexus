@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/internal/llm"
+	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/internal/pipeline"
 	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/pkg/cache"
@@ -27,10 +26,20 @@ type JobService struct {
 	asynqClient *asynq.Client
 	hub         *sse.Hub
 	gw          *llm.Gateway
+	persister   *ResultPersister
+	tracker     *UsageTracker
 }
 
 func NewJobService(db *gorm.DB, client *asynq.Client, hub *sse.Hub, gw *llm.Gateway) *JobService {
-	return &JobService{db: db, engine: pipeline.NewEngine(), asynqClient: client, hub: hub, gw: gw}
+	return &JobService{
+		db:          db,
+		engine:      pipeline.NewEngine(),
+		asynqClient: client,
+		hub:         hub,
+		gw:          gw,
+		persister:   NewResultPersister(db),
+		tracker:     NewUsageTracker(db),
+	}
 }
 
 type JobSubmitRequest struct {
@@ -182,7 +191,9 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		credSvc := NewCredentialService(s.db)
 		cred, apiKey, err := credSvc.GetDecrypted(*job.CredentialID)
 		if err != nil {
-			s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "credential error: " + err.Error()})
+			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "credential error: " + err.Error()}).Error; dbErr != nil {
+				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
 			return err
 		}
 		pctx.LLMOverride = &pipeline.LLMOverrideConfig{
@@ -194,20 +205,26 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 	}
 
 	totalSteps := len(p.Steps)
-	s.db.Model(&job).Update("total_steps", totalSteps)
+	if dbErr := s.db.Model(&job).Update("total_steps", totalSteps).Error; dbErr != nil {
+		logger.Warn("failed to update total_steps", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+	}
 
 	if err := s.engine.Run(ctx, &p, pctx,
 		pipeline.WithStartFrom(job.CurrentStep),
 		pipeline.WithOnStepStart(func(stepOrder int, processorType string) {
 			now := time.Now()
-			s.db.Create(&model.JobStepLog{
+			if dbErr := s.db.Create(&model.JobStepLog{
 				JobID:         job.ID,
 				StepOrder:     stepOrder,
 				ProcessorType: processorType,
 				Status:        "running",
 				StartedAt:     &now,
-			})
-			s.db.Model(&job).Update("current_step", stepOrder)
+			}).Error; dbErr != nil {
+				logger.Warn("failed to create step log", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
+			if dbErr := s.db.Model(&job).Update("current_step", stepOrder).Error; dbErr != nil {
+				logger.Warn("failed to update current_step", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
 			s.hub.Publish(job.UUID, sse.Event{
 				Type:      "step_start",
 				Step:      stepOrder,
@@ -227,25 +244,16 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 			} else {
 				updates["status"] = "completed"
 			}
-			s.db.Model(&model.JobStepLog{}).
+			if dbErr := s.db.Model(&model.JobStepLog{}).
 				Where("job_id = ? AND step_order = ?", job.ID, stepOrder).
-				Updates(updates)
-			s.db.Model(&job).Update("current_step", stepOrder+1)
-
-			if job.APIKeyID != nil && log.Tokens > 0 {
-				today := time.Now().Format("2006-01-02")
-				var usage model.APIUsage
-				result := s.db.Where("api_key_id = ? AND date = ?", *job.APIKeyID, today).First(&usage)
-				if result.Error != nil {
-					usage = model.APIUsage{APIKeyID: *job.APIKeyID, Date: today, Requests: 1, Tokens: int64(log.Tokens)}
-					s.db.Create(&usage)
-				} else {
-					s.db.Model(&usage).Updates(map[string]any{
-						"requests": usage.Requests + 1,
-						"tokens":   usage.Tokens + int64(log.Tokens),
-					})
-				}
+				Updates(updates).Error; dbErr != nil {
+				logger.Warn("failed to update step log", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 			}
+			if dbErr := s.db.Model(&job).Update("current_step", stepOrder+1).Error; dbErr != nil {
+				logger.Warn("failed to update current_step", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
+
+			s.tracker.Track(job.APIKeyID, log.Tokens)
 
 			evt := sse.Event{
 				Type:      "step_end",
@@ -260,27 +268,39 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 	); err != nil {
 		if errors.Is(err, pipeline.ErrPartial) {
 			result, _ := json.Marshal(pipeline.BuildResult(pctx))
-			s.db.Model(&job).Updates(map[string]any{"status": "partial", "result": result})
-			if persistErr := s.persistResults(pctx, doc.ID); persistErr != nil {
-				s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()})
+			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "partial", "result": result}).Error; dbErr != nil {
+				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
+			if persistErr := s.persister.Persist(pctx, doc.ID); persistErr != nil {
+				if dbErr := s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()}).Error; dbErr != nil {
+					logger.Warn("failed to update job error", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+				}
 			}
 			s.hub.Publish(job.UUID, sse.Event{Type: "completed", Data: "partial"})
 			return nil
 		}
-		s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": err.Error()})
+		if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": err.Error()}).Error; dbErr != nil {
+			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+		}
 		s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: err.Error()})
 		return err
 	}
 
-	if err := s.persistResults(pctx, doc.ID); err != nil {
-		s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()})
+	if err := s.persister.Persist(pctx, doc.ID); err != nil {
+		if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()}).Error; dbErr != nil {
+			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+		}
 		s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: "persist results: " + err.Error()})
 		return err
 	}
 
 	result, _ := json.Marshal(pipeline.BuildResult(pctx))
-	s.db.Model(&job).Updates(map[string]any{"status": "completed", "result": result})
-	s.db.Model(&doc).Update("status", "completed")
+	if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "completed", "result": result}).Error; dbErr != nil {
+		logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+	}
+	if dbErr := s.db.Model(&doc).Update("status", "completed").Error; dbErr != nil {
+		logger.Warn("failed to update doc status", zap.Uint("doc_id", doc.ID), zap.Error(dbErr))
+	}
 	s.hub.Publish(job.UUID, sse.Event{Type: "completed", Data: pipeline.BuildResult(pctx)})
 
 	if cache.Available() && job.ContentHash != "" {
@@ -369,193 +389,4 @@ func (s *JobService) List(page, pageSize int, status string) ([]model.Job, int64
 			return db.Order("step_order ASC")
 		}).Find(&jobs).Error
 	return jobs, total, err
-}
-
-type RecommendItem struct {
-	DocumentID uint     `json:"document_id"`
-	SourceURL  string   `json:"source_url"`
-	Content    string   `json:"content"`
-	Scene      string   `json:"scene"`
-	Score      float64  `json:"score"`
-	Reason     string   `json:"reason"`
-	Tags       []string `json:"tags,omitempty"`
-}
-
-func (s *JobService) RecommendByScene(scene string, limit int) ([]RecommendItem, error) {
-	if limit <= 0 {
-		limit = 20
-	}
-
-	var jobs []model.Job
-	err := s.db.
-		Joins("JOIN documents ON documents.id = jobs.document_id").
-		Where("documents.type = ? AND jobs.status = ?", "image", "completed").
-		Where("jobs.result IS NOT NULL").
-		Where("jobs.result LIKE ?", "%image_assessment%").
-		Preload("Document").
-		Limit(limit * 5).
-		Find(&jobs).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var items []RecommendItem
-	for _, job := range jobs {
-		if job.Result == nil {
-			continue
-		}
-		var result map[string]any
-		if err := json.Unmarshal(job.Result, &result); err != nil {
-			continue
-		}
-		extras, _ := result["extras"].(map[string]any)
-		if extras == nil {
-			continue
-		}
-		assessment, _ := extras["image_assessment"].(map[string]any)
-		if assessment == nil {
-			continue
-		}
-		useCases, _ := assessment["use_cases"].([]any)
-		for _, uc := range useCases {
-			ucMap, _ := uc.(map[string]any)
-			if ucMap == nil {
-				continue
-			}
-			ucScene, _ := ucMap["scene"].(string)
-			suitable, _ := ucMap["suitable"].(bool)
-			if ucScene == scene && suitable {
-				score, _ := ucMap["score"].(float64)
-				reason, _ := ucMap["reason"].(string)
-				var tags []string
-				if rawTags, ok := ucMap["tags"].([]any); ok {
-					for _, t := range rawTags {
-						if s, ok := t.(string); ok {
-							tags = append(tags, s)
-						}
-					}
-				}
-				items = append(items, RecommendItem{
-					DocumentID: job.DocumentID,
-					SourceURL:  job.Document.SourceURL,
-					Content:    job.Document.Content,
-					Scene:      scene,
-					Score:      score,
-					Reason:     reason,
-					Tags:       tags,
-				})
-			}
-		}
-	}
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Score > items[j].Score
-	})
-
-	if len(items) > limit {
-		items = items[:limit]
-	}
-	return items, nil
-}
-
-func (s *JobService) persistResults(pctx *pipeline.ProcessorContext, sourceID uint) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		entityNameToID := make(map[string]uint)
-
-		for _, e := range pctx.Entities {
-			aliasesJSON, _ := json.Marshal(e.Aliases)
-			attrsJSON, _ := json.Marshal(e.Attributes)
-			evidenceJSON, _ := json.Marshal(e.Evidence)
-
-			// Check if entity_align marked this as an existing entity
-			var existingID uint
-			if e.Attributes != nil {
-				if eid, ok := e.Attributes["existing_id"]; ok {
-					switch v := eid.(type) {
-					case float64:
-						existingID = uint(v)
-					case json.Number:
-						n, _ := v.Int64()
-						existingID = uint(n)
-					}
-				}
-			}
-
-			if existingID > 0 {
-				// Update existing entity
-				tx.Model(&model.Entity{}).Where("id = ?", existingID).Updates(map[string]any{
-					"attributes": attrsJSON,
-					"confidence": e.Confidence,
-					"evidence":   evidenceJSON,
-				})
-				// Merge aliases
-				var existing model.Entity
-				if tx.First(&existing, existingID).Error == nil {
-					var oldAliases, newAliases []string
-					json.Unmarshal(existing.Aliases, &oldAliases)
-					seen := make(map[string]bool)
-					for _, a := range oldAliases {
-						seen[a] = true
-						newAliases = append(newAliases, a)
-					}
-					for _, a := range e.Aliases {
-						if !seen[a] {
-							newAliases = append(newAliases, a)
-						}
-					}
-					merged, _ := json.Marshal(newAliases)
-					tx.Model(&existing).Update("aliases", merged)
-				}
-				entityNameToID[e.Name] = existingID
-			} else {
-				entity := model.Entity{
-					UUID:       uuid.New().String(),
-					Type:       e.Type,
-					Name:       e.Name,
-					Aliases:    aliasesJSON,
-					Attributes: attrsJSON,
-					Confidence: e.Confidence,
-					SourceID:   sourceID,
-					Evidence:   evidenceJSON,
-				}
-				if err := tx.Create(&entity).Error; err != nil {
-					return err
-				}
-				entityNameToID[e.Name] = entity.ID
-
-				originalJSON, _ := json.Marshal(e)
-				review := model.Review{
-					EntityID:     &entity.ID,
-					Status:       "pending",
-					OriginalData: originalJSON,
-				}
-				if err := tx.Create(&review).Error; err != nil {
-					return err
-				}
-			}
-		}
-
-		for _, r := range pctx.Relations {
-			fromID, fromOK := entityNameToID[r.From]
-			toID, toOK := entityNameToID[r.To]
-			if !fromOK || !toOK {
-				continue
-			}
-			metaJSON, _ := json.Marshal(r.Metadata)
-			rel := model.Relation{
-				UUID:         uuid.New().String(),
-				FromEntityID: fromID,
-				ToEntityID:   toID,
-				Type:         r.Type,
-				Metadata:     metaJSON,
-				Confidence:   r.Confidence,
-				SourceID:     sourceID,
-			}
-			if err := tx.Create(&rel).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
 }

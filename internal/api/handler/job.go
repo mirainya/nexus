@@ -8,11 +8,12 @@ import (
 )
 
 type JobHandler struct {
-	svc *service.JobService
+	svc          *service.JobService
+	recommendSvc *service.RecommendService
 }
 
-func NewJobHandler(svc *service.JobService) *JobHandler {
-	return &JobHandler{svc: svc}
+func NewJobHandler(svc *service.JobService, recommendSvc *service.RecommendService) *JobHandler {
+	return &JobHandler{svc: svc, recommendSvc: recommendSvc}
 }
 
 func (h *JobHandler) Submit(c *gin.Context) {
@@ -63,7 +64,7 @@ func (h *JobHandler) Recommend(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, "scene is required"))
 		return
 	}
-	items, err := h.svc.RecommendByScene(scene, 20)
+	items, err := h.recommendSvc.ByScene(scene, 20)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

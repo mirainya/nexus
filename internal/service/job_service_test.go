@@ -16,7 +16,11 @@ import (
 var testDB *gorm.DB
 
 func TestMain(m *testing.M) {
-	config.C = &config.Config{}
+	config.C = &config.Config{
+		Server: config.ServerConfig{
+			CredentialSecret: "test-credential-secret-key-32ch!",
+		},
+	}
 	logger.Init()
 
 	var err error
@@ -37,6 +41,8 @@ func TestMain(m *testing.M) {
 		&model.JobStepLog{},
 		&model.Review{},
 		&model.LLMProvider{},
+		&model.Credential{},
+		&model.APIUsage{},
 	)
 	model.SetDB(testDB)
 
@@ -236,9 +242,9 @@ func TestJobService_List_FilterByStatus(t *testing.T) {
 	}
 }
 
-func TestJobService_PersistResults(t *testing.T) {
+func TestResultPersister_PersistResults(t *testing.T) {
 	p := seedPipeline(t)
-	svc := NewJobService(testDB, nil, nil, nil)
+	persister := NewResultPersister(testDB)
 
 	doc := model.Document{UUID: "persist-test", Type: "text", Content: "test", Status: "pending"}
 	testDB.Create(&doc)
@@ -255,7 +261,7 @@ func TestJobService_PersistResults(t *testing.T) {
 		},
 	}
 
-	err := svc.persistResults(pctx, doc.ID)
+	err := persister.Persist(pctx, doc.ID)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}
@@ -282,11 +288,11 @@ func TestJobService_PersistResults(t *testing.T) {
 	}
 }
 
-func TestJobService_PersistResults_ExistingEntity(t *testing.T) {
+func TestResultPersister_ExistingEntity(t *testing.T) {
 	doc := model.Document{UUID: "persist-existing-test", Type: "text", Content: "test", Status: "pending"}
 	testDB.Create(&doc)
 
-	svc := NewJobService(testDB, nil, nil, nil)
+	persister := NewResultPersister(testDB)
 
 	aliasesJSON, _ := json.Marshal([]string{"Robert"})
 	existing := model.Entity{
@@ -311,7 +317,7 @@ func TestJobService_PersistResults_ExistingEntity(t *testing.T) {
 		},
 	}
 
-	err := svc.persistResults(pctx, doc.ID)
+	err := persister.Persist(pctx, doc.ID)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}

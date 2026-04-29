@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mirainya/nexus/console"
 	"github.com/mirainya/nexus/internal/api"
 	"github.com/mirainya/nexus/internal/llm"
 	"github.com/mirainya/nexus/internal/model"
@@ -99,7 +98,6 @@ func main() {
 	var httpSrv *http.Server
 	if runAPI {
 		r := api.SetupRouter(db, asynqClient, sse.Default(), llm.G)
-		console.RegisterRoutes(r)
 		addr := fmt.Sprintf(":%d", config.C.Server.Port)
 		httpSrv = &http.Server{Addr: addr, Handler: r}
 

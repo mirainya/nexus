@@ -65,7 +65,7 @@ func setupTestRouter() *gin.Engine {
 	r := gin.New()
 
 	authH := NewAuthHandler(testDB)
-	jobH := NewJobHandler(service.NewJobService(testDB, nil, nil, nil))
+	jobH := NewJobHandler(service.NewJobService(testDB, nil, nil, nil), service.NewRecommendService(testDB))
 	pipelineH := NewPipelineHandler(service.NewPipelineService(testDB))
 
 	r.POST("/api/admin/auth/login", authH.Login)
