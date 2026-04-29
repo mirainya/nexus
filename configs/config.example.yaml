@@ -2,6 +2,11 @@ server:
   port: 8080
   grpc_port: 9090
   jwt_secret: "change-me"
+  rate_limit:
+    global_rate: 100    # requests/sec
+    global_burst: 200
+    ip_rate: 10         # requests/sec per IP
+    ip_burst: 20
 
 database:
   host: "127.0.0.1"

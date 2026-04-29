@@ -98,6 +98,27 @@ func renderPrompt(template string, vars map[string]any) string {
 }
 
 func extractJSON(s string) string {
+	if idx := strings.Index(s, "```json"); idx >= 0 {
+		inner := s[idx+7:]
+		if end := strings.Index(inner, "```"); end >= 0 {
+			inner = strings.TrimSpace(inner[:end])
+			if inner != "" {
+				return inner
+			}
+		}
+	}
+	if idx := strings.Index(s, "```"); idx >= 0 {
+		inner := s[idx+3:]
+		if nl := strings.Index(inner, "\n"); nl >= 0 {
+			inner = inner[nl+1:]
+		}
+		if end := strings.Index(inner, "```"); end >= 0 {
+			inner = strings.TrimSpace(inner[:end])
+			if inner != "" {
+				return inner
+			}
+		}
+	}
 	start := strings.Index(s, "{")
 	end := strings.LastIndex(s, "}")
 	if start >= 0 && end > start {

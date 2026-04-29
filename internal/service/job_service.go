@@ -329,12 +329,18 @@ type RecommendItem struct {
 }
 
 func (s *JobService) RecommendByScene(scene string, limit int) ([]RecommendItem, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
 	var jobs []model.Job
 	err := model.DB().
 		Joins("JOIN documents ON documents.id = jobs.document_id").
 		Where("documents.type = ? AND jobs.status = ?", "image", "completed").
 		Where("jobs.result IS NOT NULL").
+		Where("jobs.result::jsonb -> 'extras' -> 'image_assessment' -> 'use_cases' IS NOT NULL").
 		Preload("Document").
+		Limit(limit * 5).
 		Find(&jobs).Error
 	if err != nil {
 		return nil, err
@@ -393,7 +399,7 @@ func (s *JobService) RecommendByScene(scene string, limit int) ([]RecommendItem,
 		return items[i].Score > items[j].Score
 	})
 
-	if limit > 0 && len(items) > limit {
+	if len(items) > limit {
 		items = items[:limit]
 	}
 	return items, nil

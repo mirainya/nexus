@@ -6,11 +6,30 @@ import (
 	"github.com/mirainya/nexus/console"
 	"github.com/mirainya/nexus/internal/api/handler"
 	"github.com/mirainya/nexus/internal/api/middleware"
+	"github.com/mirainya/nexus/pkg/config"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 )
 
 func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
-	rl := middleware.NewRateLimiter(100, 200, 10, 20)
+	cfg := config.C.Server.RateLimit
+	globalRate := cfg.GlobalRate
+	if globalRate <= 0 {
+		globalRate = 100
+	}
+	globalBurst := cfg.GlobalBurst
+	if globalBurst <= 0 {
+		globalBurst = 200
+	}
+	ipRate := cfg.IPRate
+	if ipRate <= 0 {
+		ipRate = 10
+	}
+	ipBurst := cfg.IPBurst
+	if ipBurst <= 0 {
+		ipBurst = 20
+	}
+	rl := middleware.NewRateLimiter(rate.Limit(globalRate), globalBurst, rate.Limit(ipRate), ipBurst)
 	r := gin.New()
 	r.Use(middleware.RequestID(), middleware.CORS(), rl.Middleware(), middleware.Metrics(), middleware.Logger(), gin.Recovery())
 

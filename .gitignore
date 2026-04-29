@@ -4,18 +4,27 @@
 *.dll
 *.so
 *.dylib
+*.test
+*.out
 nexus
 nexus-server
+bin/
+
+# Vendor
+vendor/
 
 # Config with secrets
 configs/config.yaml
 !configs/config.example.yaml
+.env
+.env.*
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -24,6 +33,10 @@ Thumbs.db
 # Temp
 .temp/
 tmp/
+temp/
+
+# Uploads
+uploads/
 
 # Frontend
 console/node_modules/
@@ -31,6 +44,7 @@ console/dist/
 
 # Test
 coverage.out
+coverage.html
 test_image.jpg
 
 # Logs

@@ -30,9 +30,17 @@ type XFileStorageConfig struct {
 }
 
 type ServerConfig struct {
-	Port      int    `mapstructure:"port"`
-	GRPCPort  int    `mapstructure:"grpc_port"`
-	JWTSecret string `mapstructure:"jwt_secret"`
+	Port         int            `mapstructure:"port"`
+	GRPCPort     int            `mapstructure:"grpc_port"`
+	JWTSecret    string         `mapstructure:"jwt_secret"`
+	RateLimit    RateLimitConfig `mapstructure:"rate_limit"`
+}
+
+type RateLimitConfig struct {
+	GlobalRate  float64 `mapstructure:"global_rate"`
+	GlobalBurst int     `mapstructure:"global_burst"`
+	IPRate      float64 `mapstructure:"ip_rate"`
+	IPBurst     int     `mapstructure:"ip_burst"`
 }
 
 type DatabaseConfig struct {

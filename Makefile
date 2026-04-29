@@ -20,7 +20,11 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 test:
-	go test ./... -v
+	go test ./... -v -count=1
+
+test-cover:
+	go test ./... -coverprofile=coverage.out
+	go tool cover -html=coverage.out -o coverage.html
 
 lint:
 	golangci-lint run ./...
