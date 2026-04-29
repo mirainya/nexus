@@ -1,0 +1,56 @@
+services:
+  nexus:
+    build: .
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      NEXUS_DATABASE_DRIVER: postgres
+      NEXUS_DATABASE_HOST: postgres
+      NEXUS_DATABASE_PORT: "5432"
+      NEXUS_DATABASE_USER: nexus
+      NEXUS_DATABASE_PASSWORD: ${DB_PASSWORD:-nexus_secret}
+      NEXUS_DATABASE_DBNAME: nexus
+      NEXUS_REDIS_ADDR: redis:6379
+      NEXUS_SERVER_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required and must be >= 32 chars}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nexus_secret}
+      POSTGRES_DB: nexus
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

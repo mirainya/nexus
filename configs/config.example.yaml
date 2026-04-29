@@ -1,0 +1,63 @@
+server:
+  port: 8080
+  grpc_port: 9090
+  jwt_secret: "change-me"
+
+database:
+  host: "127.0.0.1"
+  port: 5432
+  user: "nexus"
+  password: "nexus"
+  dbname: "nexus"
+  max_open_conns: 50
+  max_idle_conns: 10
+  log_level: "warn"
+
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0
+  pool_size: 20
+
+milvus:
+  addr: "127.0.0.1:19530"
+  collection: "nexus_embeddings"
+  dimension: 1536
+
+storage:
+  type: "local"           # local / s3 / minio
+  local_path: "./uploads"
+  s3_bucket: ""
+  s3_region: ""
+  s3_endpoint: ""
+
+llm:
+  providers:
+    openai:
+      api_key: ""
+      base_url: "https://api.openai.com/v1"
+      default_model: "gpt-4o"
+    anthropic:
+      api_key: ""
+      base_url: "https://api.anthropic.com"
+      default_model: "claude-sonnet-4-6"
+    doubao:
+      api_key: ""
+      base_url: ""
+      default_model: ""
+  default_provider: "openai"
+  max_retries: 3
+  timeout: 120
+
+worker:
+  concurrency: 10
+  max_retry: 3
+
+xfile_storage:
+  base_url: "https://xfilestorage.mirainya.icu"
+  api_key: ""
+
+log:
+  level: "info"               # debug / info / warn / error
+  output: "stdout"            # stdout / file
+  file_path: "logs/nexus.log" # output=file 时生效

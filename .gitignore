@@ -1,0 +1,44 @@
+# Binary
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+nexus
+nexus-server
+
+# Config with secrets
+configs/config.yaml
+!configs/config.example.yaml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+.temp/
+tmp/
+
+# Frontend
+console/node_modules/
+console/dist/
+
+# Test
+coverage.out
+test_image.jpg
+
+# Logs
+*.log
+logs/
+
+# Claude
+.claude/
+
+# Plan
+plan.md

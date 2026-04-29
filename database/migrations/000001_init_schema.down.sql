@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS job_step_logs;
+DROP TABLE IF EXISTS jobs;
+DROP TABLE IF EXISTS relations;
+DROP TABLE IF EXISTS entities;
+DROP TABLE IF EXISTS documents;
+DROP TABLE IF EXISTS pipeline_steps;
+DROP TABLE IF EXISTS pipelines;
+DROP TABLE IF EXISTS prompt_templates;
+DROP TABLE IF EXISTS llm_providers;
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS users;
