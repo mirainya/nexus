@@ -136,6 +136,9 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 		admin.POST("/search", searchH.Search)
 
 		admin.GET("/stats", statsH.Dashboard)
+		admin.GET("/stats/pipeline-performance", statsH.PipelinePerformance)
+		admin.GET("/stats/llm-performance", statsH.LLMPerformance)
+		admin.GET("/stats/errors", statsH.ErrorAnalysis)
 
 		admin.GET("/graph", graphH.GetGraph)
 

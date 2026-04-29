@@ -119,6 +119,9 @@ export const searchApi = {
 
 export const statsApi = {
   dashboard: () => api.get<unknown, DashboardStats>('/admin/stats'),
+  pipelinePerformance: (days?: number) => api.get('/admin/stats/pipeline-performance', { params: { days } }),
+  llmPerformance: (days?: number) => api.get('/admin/stats/llm-performance', { params: { days } }),
+  errors: (days?: number) => api.get('/admin/stats/errors', { params: { days } }),
 };
 
 export const graphApi = {

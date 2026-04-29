@@ -310,3 +310,67 @@ export interface UploadResponse {
   url: string;
   path: string;
 }
+
+// Observability
+export interface PipelinePerformance {
+  pipeline_id: number;
+  pipeline_name: string;
+  total_jobs: number;
+  avg_duration_ms: number;
+  p95_duration_ms: number;
+  success_rate: number;
+  steps: StepPerformance[];
+}
+
+export interface StepPerformance {
+  processor_type: string;
+  avg_duration_ms: number;
+  avg_tokens: number;
+  avg_cost: number;
+  error_rate: number;
+}
+
+export interface LLMPerformanceStats {
+  by_processor: ProcessorStats[];
+  daily_usage: DailyLLMUsage[];
+}
+
+export interface ProcessorStats {
+  processor_type: string;
+  total_calls: number;
+  avg_duration_ms: number;
+  total_tokens: number;
+  total_cost: number;
+  error_rate: number;
+}
+
+export interface DailyLLMUsage {
+  date: string;
+  tokens: number;
+  cost: number;
+  calls: number;
+}
+
+export interface ErrorAnalysis {
+  error_trend: DailyErrorCount[];
+  top_errors: ErrorGroup[];
+  recent_failures: FailedJobBrief[];
+}
+
+export interface DailyErrorCount {
+  date: string;
+  count: number;
+}
+
+export interface ErrorGroup {
+  error: string;
+  count: number;
+}
+
+export interface FailedJobBrief {
+  job_id: number;
+  uuid: string;
+  error: string;
+  pipeline: string;
+  created_at: string;
+}
