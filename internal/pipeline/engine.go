@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/mirainya/nexus/internal/model"
+	"github.com/mirainya/nexus/pkg/httputil"
 	"github.com/mirainya/nexus/pkg/logger"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -437,26 +436,9 @@ func BuildResult(pctx *ProcessorContext) map[string]any {
 }
 
 func downloadImageBase64(ctx context.Context, imageURL string) (string, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, "GET", imageURL, nil)
+	data, ct, err := httputil.SafeGetBody(ctx, imageURL, 20*1024*1024)
 	if err != nil {
 		return "", err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download image: status %d", resp.StatusCode)
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 20*1024*1024))
-	if err != nil {
-		return "", err
-	}
-	ct := resp.Header.Get("Content-Type")
-	if ct == "" {
-		ct = http.DetectContentType(data)
 	}
 	return "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }

@@ -338,7 +338,7 @@ func (s *JobService) RecommendByScene(scene string, limit int) ([]RecommendItem,
 		Joins("JOIN documents ON documents.id = jobs.document_id").
 		Where("documents.type = ? AND jobs.status = ?", "image", "completed").
 		Where("jobs.result IS NOT NULL").
-		Where("jobs.result::jsonb -> 'extras' -> 'image_assessment' -> 'use_cases' IS NOT NULL").
+		Where("jobs.result LIKE ?", "%image_assessment%").
 		Preload("Document").
 		Limit(limit * 5).
 		Find(&jobs).Error
