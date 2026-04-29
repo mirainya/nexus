@@ -114,7 +114,7 @@ export const uploadApi = {
 };
 
 export const searchApi = {
-  search: (query: string) => api.post('/admin/search', { query }),
+  search: (query: string, mode?: string) => api.post('/admin/search', { query, mode }),
 };
 
 export const statsApi = {

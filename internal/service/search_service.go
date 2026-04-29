@@ -29,12 +29,20 @@ func NewSearchService(db *gorm.DB, gw *llm.Gateway, vec vectordb.Client) *Search
 type SearchRequest struct {
 	Query string `json:"query" binding:"required"`
 	Limit int    `json:"limit"`
+	Mode  string `json:"mode"`
+}
+
+type SearchStats struct {
+	Total       int `json:"total"`
+	VectorHits  int `json:"vector_hits"`
+	KeywordHits int `json:"keyword_hits"`
 }
 
 type SearchResult struct {
 	Items     []SearchItem `json:"items"`
 	Query     ParsedQuery  `json:"parsed_query"`
 	Reasoning string       `json:"reasoning,omitempty"`
+	Stats     SearchStats  `json:"stats"`
 }
 
 type SearchItem struct {
@@ -72,30 +80,86 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 		limit = 20
 	}
 
-	parsed := s.parseIntent(ctx, req.Query)
-
-	vecUUIDs, vecScores := s.vectorRecall(ctx, req.Query, limit)
-
-	items, err := s.queryDocuments(parsed, limit, vecUUIDs)
-	if err != nil {
-		return nil, err
+	mode := req.Mode
+	if mode == "" {
+		mode = "hybrid"
 	}
 
-	if vecScores != nil {
+	result := &SearchResult{}
+
+	switch mode {
+	case "vector":
+		vecUUIDs, vecScores := s.vectorRecall(ctx, req.Query, limit)
+		if len(vecUUIDs) == 0 {
+			return result, nil
+		}
+		items, err := s.queryDocuments(ParsedQuery{}, limit, vecUUIDs)
+		if err != nil {
+			return nil, err
+		}
 		for i := range items {
 			if score, ok := vecScores[items[i].DocumentUUID]; ok {
 				items[i].VectorScore = float64(score)
 			}
 		}
-	}
+		result.Items = items
+		result.Stats = SearchStats{Total: len(items), VectorHits: len(items)}
 
-	result := &SearchResult{Items: items, Query: parsed}
+	case "keyword":
+		parsed := s.parseIntent(ctx, req.Query)
+		result.Query = parsed
+		items, err := s.queryDocuments(parsed, limit, nil)
+		if err != nil {
+			return nil, err
+		}
+		result.Items = items
+		result.Stats = SearchStats{Total: len(items), KeywordHits: len(items)}
+		if len(items) > 5 && parsed.Intent != "" {
+			ranked, reasoning := s.rerank(ctx, req.Query, parsed, items, limit)
+			if ranked != nil {
+				result.Items = ranked
+				result.Reasoning = reasoning
+				result.Stats.Total = len(ranked)
+			}
+		}
 
-	if len(items) > 5 && parsed.Intent != "" {
-		ranked, reasoning := s.rerank(ctx, req.Query, parsed, items, limit)
-		if ranked != nil {
-			result.Items = ranked
-			result.Reasoning = reasoning
+	default: // hybrid
+		parsed := s.parseIntent(ctx, req.Query)
+		result.Query = parsed
+		vecUUIDs, vecScores := s.vectorRecall(ctx, req.Query, limit)
+		items, err := s.queryDocuments(parsed, limit, vecUUIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		vecSet := make(map[string]bool, len(vecUUIDs))
+		for _, u := range vecUUIDs {
+			vecSet[u] = true
+		}
+
+		vectorHits, keywordHits := 0, 0
+		for i := range items {
+			isVec := vecSet[items[i].DocumentUUID]
+			if isVec {
+				if score, ok := vecScores[items[i].DocumentUUID]; ok {
+					items[i].VectorScore = float64(score)
+				}
+				vectorHits++
+			} else {
+				keywordHits++
+			}
+		}
+
+		result.Items = items
+		result.Stats = SearchStats{Total: len(items), VectorHits: vectorHits, KeywordHits: keywordHits}
+
+		if len(items) > 5 && parsed.Intent != "" {
+			ranked, reasoning := s.rerank(ctx, req.Query, parsed, items, limit)
+			if ranked != nil {
+				result.Items = ranked
+				result.Reasoning = reasoning
+				result.Stats.Total = len(ranked)
+			}
 		}
 	}
 
