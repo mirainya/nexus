@@ -1,4 +1,22 @@
 import axios from 'axios';
+import type {
+  LoginRequest,
+  LoginResponse,
+  Pipeline,
+  PipelineStep,
+  PromptTemplate,
+  Job,
+  JobSubmitRequest,
+  JobSubmitResponse,
+  Review,
+  Entity,
+  Relation,
+  RecommendItem,
+  LLMProvider,
+  LLMProviderCreateRequest,
+  ModelInfo,
+  PaginatedData,
+} from './types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -26,57 +44,57 @@ api.interceptors.response.use(
 export default api;
 
 export const authApi = {
-  login: (data: { username: string; password: string }) => api.post('/admin/auth/login', data),
+  login: (data: LoginRequest) => api.post<unknown, LoginResponse>('/admin/auth/login', data),
 };
 
 export const pipelineApi = {
-  list: () => api.get('/admin/pipelines'),
-  get: (id: number) => api.get(`/admin/pipelines/${id}`),
-  create: (data: any) => api.post('/admin/pipelines', data),
-  update: (id: number, data: any) => api.put(`/admin/pipelines/${id}`, data),
+  list: () => api.get<unknown, Pipeline[]>('/admin/pipelines'),
+  get: (id: number) => api.get<unknown, Pipeline>(`/admin/pipelines/${id}`),
+  create: (data: Partial<Pipeline>) => api.post<unknown, Pipeline>('/admin/pipelines', data),
+  update: (id: number, data: Partial<Pipeline>) => api.put<unknown, Pipeline>(`/admin/pipelines/${id}`, data),
   delete: (id: number) => api.delete(`/admin/pipelines/${id}`),
-  createStep: (id: number, data: any) => api.post(`/admin/pipelines/${id}/steps`, data),
-  updateStep: (id: number, stepId: number, data: any) => api.put(`/admin/pipelines/${id}/steps/${stepId}`, data),
+  createStep: (id: number, data: Partial<PipelineStep>) => api.post<unknown, PipelineStep>(`/admin/pipelines/${id}/steps`, data),
+  updateStep: (id: number, stepId: number, data: Partial<PipelineStep>) => api.put<unknown, PipelineStep>(`/admin/pipelines/${id}/steps/${stepId}`, data),
   deleteStep: (id: number, stepId: number) => api.delete(`/admin/pipelines/${id}/steps/${stepId}`),
   reorderSteps: (id: number, stepIds: number[]) => api.put(`/admin/pipelines/${id}/steps/reorder`, { step_ids: stepIds }),
 };
 
 export const promptApi = {
-  list: () => api.get('/admin/prompts'),
-  get: (id: number) => api.get(`/admin/prompts/${id}`),
-  create: (data: any) => api.post('/admin/prompts', data),
-  update: (id: number, data: any) => api.put(`/admin/prompts/${id}`, data),
+  list: () => api.get<unknown, PromptTemplate[]>('/admin/prompts'),
+  get: (id: number) => api.get<unknown, PromptTemplate>(`/admin/prompts/${id}`),
+  create: (data: Partial<PromptTemplate>) => api.post<unknown, PromptTemplate>('/admin/prompts', data),
+  update: (id: number, data: Partial<PromptTemplate>) => api.put<unknown, PromptTemplate>(`/admin/prompts/${id}`, data),
   delete: (id: number) => api.delete(`/admin/prompts/${id}`),
 };
 
 export const jobApi = {
-  list: (params?: any) => api.get('/admin/jobs', { params }),
-  submit: (data: any) => api.post('/admin/jobs', data),
-  status: (uuid: string) => api.get(`/admin/jobs/${uuid}`),
-  recommend: (scene: string) => api.get('/admin/jobs/recommend', { params: { scene } }),
+  list: (params?: { page?: number; page_size?: number; status?: string }) => api.get<unknown, PaginatedData<Job>>('/admin/jobs', { params }),
+  submit: (data: JobSubmitRequest) => api.post<unknown, JobSubmitResponse>('/admin/jobs', data),
+  status: (uuid: string) => api.get<unknown, Job>(`/admin/jobs/${uuid}`),
+  recommend: (scene: string) => api.get<unknown, RecommendItem[]>('/admin/jobs/recommend', { params: { scene } }),
 };
 
 export const reviewApi = {
-  list: (params?: any) => api.get('/admin/reviews', { params }),
+  list: (params?: { page?: number; page_size?: number; status?: string }) => api.get<unknown, PaginatedData<Review>>('/admin/reviews', { params }),
   approve: (id: number) => api.put(`/admin/reviews/${id}/approve`),
   reject: (id: number) => api.put(`/admin/reviews/${id}/reject`),
-  modify: (id: number, data: any) => api.put(`/admin/reviews/${id}/modify`, data),
+  modify: (id: number, data: { modified_data: unknown }) => api.put(`/admin/reviews/${id}/modify`, data),
 };
 
 export const entityApi = {
-  list: (params?: any) => api.get('/admin/entities', { params }),
-  get: (id: number) => api.get(`/admin/entities/${id}`),
-  getRelations: (id: number) => api.get(`/admin/entities/${id}/relations`),
-  search: (keyword: string) => api.get('/admin/entities', { params: { keyword, page_size: 50 } }),
+  list: (params?: { page?: number; page_size?: number; keyword?: string; type?: string }) => api.get<unknown, PaginatedData<Entity>>('/admin/entities', { params }),
+  get: (id: number) => api.get<unknown, Entity>(`/admin/entities/${id}`),
+  getRelations: (id: number) => api.get<unknown, Relation[]>(`/admin/entities/${id}/relations`),
+  search: (keyword: string) => api.get<unknown, PaginatedData<Entity>>('/admin/entities', { params: { keyword, page_size: 50 } }),
 };
 
 export const llmProviderApi = {
-  list: () => api.get('/admin/llm-providers'),
-  create: (data: any) => api.post('/admin/llm-providers', data),
-  update: (id: number, data: any) => api.put(`/admin/llm-providers/${id}`, data),
+  list: () => api.get<unknown, LLMProvider[]>('/admin/llm-providers'),
+  create: (data: LLMProviderCreateRequest) => api.post<unknown, LLMProvider>('/admin/llm-providers', data),
+  update: (id: number, data: Partial<LLMProviderCreateRequest>) => api.put<unknown, LLMProvider>(`/admin/llm-providers/${id}`, data),
   delete: (id: number) => api.delete(`/admin/llm-providers/${id}`),
   setDefault: (id: number) => api.put(`/admin/llm-providers/${id}/default`),
-  listModels: (name: string) => api.get(`/admin/llm-providers/${name}/models`),
+  listModels: (name: string) => api.get<unknown, ModelInfo[]>(`/admin/llm-providers/${name}/models`),
 };
 
 export const uploadApi = {
