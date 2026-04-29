@@ -9,18 +9,21 @@ import (
 
 	"github.com/mirainya/nexus/internal/llm"
 	"github.com/mirainya/nexus/internal/model"
+	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/logger"
+	"github.com/mirainya/nexus/pkg/vectordb"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type SearchService struct {
-	db *gorm.DB
-	gw *llm.Gateway
+	db  *gorm.DB
+	gw  *llm.Gateway
+	vec vectordb.Client
 }
 
-func NewSearchService(db *gorm.DB, gw *llm.Gateway) *SearchService {
-	return &SearchService{db: db, gw: gw}
+func NewSearchService(db *gorm.DB, gw *llm.Gateway, vec vectordb.Client) *SearchService {
+	return &SearchService{db: db, gw: gw, vec: vec}
 }
 
 type SearchRequest struct {
@@ -35,15 +38,17 @@ type SearchResult struct {
 }
 
 type SearchItem struct {
-	DocumentID uint          `json:"document_id"`
-	Type       string        `json:"type"`
-	SourceURL  string        `json:"source_url"`
-	Content    string        `json:"content,omitempty"`
-	Summary    string        `json:"summary,omitempty"`
-	Entities   []EntityBrief `json:"entities,omitempty"`
-	Score      float64       `json:"score,omitempty"`
-	Reason     string        `json:"reason,omitempty"`
-	CreatedAt  time.Time     `json:"created_at"`
+	DocumentID   uint          `json:"document_id"`
+	DocumentUUID string        `json:"document_uuid,omitempty"`
+	Type         string        `json:"type"`
+	SourceURL    string        `json:"source_url"`
+	Content      string        `json:"content,omitempty"`
+	Summary      string        `json:"summary,omitempty"`
+	Entities     []EntityBrief `json:"entities,omitempty"`
+	Score        float64       `json:"score,omitempty"`
+	VectorScore  float64       `json:"vector_score,omitempty"`
+	Reason       string        `json:"reason,omitempty"`
+	CreatedAt    time.Time     `json:"created_at"`
 }
 
 type EntityBrief struct {
@@ -69,9 +74,19 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 
 	parsed := s.parseIntent(ctx, req.Query)
 
-	items, err := s.queryDocuments(parsed, limit)
+	vecUUIDs, vecScores := s.vectorRecall(ctx, req.Query, limit)
+
+	items, err := s.queryDocuments(parsed, limit, vecUUIDs)
 	if err != nil {
 		return nil, err
+	}
+
+	if vecScores != nil {
+		for i := range items {
+			if score, ok := vecScores[items[i].DocumentUUID]; ok {
+				items[i].VectorScore = float64(score)
+			}
+		}
 	}
 
 	result := &SearchResult{Items: items, Query: parsed}
@@ -85,6 +100,47 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 	}
 
 	return result, nil
+}
+
+// --- 向量召回 ---
+
+func (s *SearchService) vectorRecall(ctx context.Context, query string, topK int) ([]string, map[string]float32) {
+	if s.vec == nil {
+		return nil, nil
+	}
+
+	resp, err := s.gw.Embedding(ctx, llm.EmbeddingRequest{
+		Model: "text-embedding-3-small",
+		Input: query,
+	})
+	if err != nil {
+		logger.Warn("vector recall embedding failed", zap.Error(err))
+		return nil, nil
+	}
+
+	vec32 := make([]float32, len(resp.Embedding))
+	for i, v := range resp.Embedding {
+		vec32[i] = float32(v)
+	}
+
+	collection := config.C.Milvus.Collection
+	if collection == "" {
+		collection = "nexus_embeddings"
+	}
+
+	results, err := s.vec.Search(collection, vec32, topK, nil)
+	if err != nil {
+		logger.Warn("vector recall search failed", zap.Error(err))
+		return nil, nil
+	}
+
+	uuids := make([]string, 0, len(results))
+	scores := make(map[string]float32, len(results))
+	for _, r := range results {
+		uuids = append(uuids, r.ID)
+		scores[r.ID] = r.Score
+	}
+	return uuids, scores
 }
 
 // --- 阶段 A：LLM 意图解析 ---
@@ -143,7 +199,7 @@ type docRow struct {
 	JobResult json.RawMessage `gorm:"column:job_result"`
 }
 
-func (s *SearchService) queryDocuments(pq ParsedQuery, limit int) ([]SearchItem, error) {
+func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []string) ([]SearchItem, error) {
 	q := s.db.Table("documents d").
 		Select("d.*, j.result as job_result").
 		Joins("LEFT JOIN jobs j ON j.document_id = d.id AND j.status = 'completed'").
@@ -151,31 +207,47 @@ func (s *SearchService) queryDocuments(pq ParsedQuery, limit int) ([]SearchItem,
 
 	hasCondition := false
 
+	var keywordScope *gorm.DB
+	keywordScope = s.db.Table("documents d").
+		Select("d.*, j.result as job_result").
+		Joins("LEFT JOIN jobs j ON j.document_id = d.id AND j.status = 'completed'").
+		Where("d.deleted_at IS NULL")
+
 	if pq.Entity != "" {
-		q = q.Where("d.id IN (SELECT source_id FROM entities WHERE deleted_at IS NULL AND (name ILIKE ? OR aliases::text ILIKE ?))",
+		keywordScope = keywordScope.Where("d.id IN (SELECT source_id FROM entities WHERE deleted_at IS NULL AND (name ILIKE ? OR aliases::text ILIKE ?))",
 			"%"+pq.Entity+"%", "%"+pq.Entity+"%")
 		hasCondition = true
 	}
 	if pq.Type != "" {
-		q = q.Where("d.type = ?", pq.Type)
+		keywordScope = keywordScope.Where("d.type = ?", pq.Type)
 		hasCondition = true
 	}
 	if pq.DateFrom != "" {
-		q = q.Where("d.created_at >= ?", pq.DateFrom)
+		keywordScope = keywordScope.Where("d.created_at >= ?", pq.DateFrom)
 		hasCondition = true
 	}
 	if pq.DateTo != "" {
-		q = q.Where("d.created_at < ?::date + interval '1 day'", pq.DateTo)
+		keywordScope = keywordScope.Where("d.created_at < ?::date + interval '1 day'", pq.DateTo)
 		hasCondition = true
 	}
 	for _, kw := range pq.Keywords {
 		like := "%" + kw + "%"
-		q = q.Where("(d.content ILIKE ? OR COALESCE(j.result::text,'') ILIKE ?)", like, like)
+		keywordScope = keywordScope.Where("(d.content ILIKE ? OR COALESCE(j.result::text,'') ILIKE ?)", like, like)
 		hasCondition = true
 	}
 
-	if !hasCondition {
+	hasVec := len(vecUUIDs) > 0
+
+	if !hasCondition && !hasVec {
 		return nil, nil
+	}
+
+	if hasCondition && hasVec {
+		q = q.Where("(d.uuid IN ?) OR (d.id IN (?))", vecUUIDs, keywordScope.Select("d.id"))
+	} else if hasVec {
+		q = q.Where("d.uuid IN ?", vecUUIDs)
+	} else {
+		q = keywordScope
 	}
 
 	var rows []docRow
@@ -193,12 +265,13 @@ func (s *SearchService) queryDocuments(pq ParsedQuery, limit int) ([]SearchItem,
 	items := make([]SearchItem, 0, len(rows))
 	for _, r := range rows {
 		item := SearchItem{
-			DocumentID: r.ID,
-			Type:       r.Type,
-			SourceURL:  r.SourceURL,
-			Content:    r.Content,
-			Entities:   entityMap[r.ID],
-			CreatedAt:  r.CreatedAt,
+			DocumentID:   r.ID,
+			DocumentUUID: r.UUID,
+			Type:         r.Type,
+			SourceURL:    r.SourceURL,
+			Content:      r.Content,
+			Entities:     entityMap[r.ID],
+			CreatedAt:    r.CreatedAt,
 		}
 		if r.JobResult != nil {
 			var jr map[string]any

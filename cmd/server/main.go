@@ -24,6 +24,7 @@ import (
 	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/database"
 	"github.com/mirainya/nexus/pkg/logger"
+	"github.com/mirainya/nexus/pkg/vectordb"
 )
 
 func main() {
@@ -73,6 +74,9 @@ func main() {
 
 	llm.Init(db)
 	cache.Init()
+	if err := vectordb.Init(config.C.Milvus.Addr, config.C.Milvus.Collection, config.C.Milvus.Dimension); err != nil {
+		log.Fatalf("failed to init milvus: %v", err)
+	}
 	sse.Init()
 	processor.Init()
 
@@ -144,6 +148,7 @@ func main() {
 	if asynqClient != nil {
 		asynqClient.Close()
 	}
+	vectordb.Close()
 
 	sqlDB, err := db.DB()
 	if err == nil {

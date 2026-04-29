@@ -16,6 +16,7 @@ import (
 	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/pkg/cache"
 	"github.com/mirainya/nexus/pkg/logger"
+	"github.com/mirainya/nexus/pkg/vectordb"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -185,6 +186,10 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		},
 		LLM: s.gw,
 		DB:  s.db,
+	}
+
+	if vectordb.Available() {
+		pctx.VectorDB = vectordb.Default()
 	}
 
 	if job.CredentialID != nil {

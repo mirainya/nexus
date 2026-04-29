@@ -6,6 +6,9 @@ import (
 
 	"github.com/mirainya/nexus/internal/llm"
 	"github.com/mirainya/nexus/internal/pipeline"
+	"github.com/mirainya/nexus/pkg/config"
+	"github.com/mirainya/nexus/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type Embedding struct{}
@@ -49,5 +52,24 @@ func (p *Embedding) Process(ctx context.Context, pctx *pipeline.ProcessorContext
 		pctx.Extras = make(map[string]any)
 	}
 	pctx.Extras["embedding"] = resp.Embedding
+
+	if pctx.VectorDB != nil && len(resp.Embedding) > 0 {
+		vec32 := make([]float32, len(resp.Embedding))
+		for i, v := range resp.Embedding {
+			vec32[i] = float32(v)
+		}
+		meta := map[string]any{
+			"doc_id":   pctx.Document.ID,
+			"doc_type": pctx.Document.Type,
+		}
+		collection := config.C.Milvus.Collection
+		if collection == "" {
+			collection = "nexus_embeddings"
+		}
+		if err := pctx.VectorDB.Insert(collection, pctx.Document.ID, vec32, meta); err != nil {
+			logger.Warn("failed to insert vector", zap.String("doc_id", pctx.Document.ID), zap.Error(err))
+		}
+	}
+
 	return nil
 }

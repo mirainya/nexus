@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mirainya/nexus/internal/llm"
+	"github.com/mirainya/nexus/pkg/vectordb"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,7 @@ type ProcessorContext struct {
 	LLMOverride    *LLMOverrideConfig     `json:"-"`
 	LLM            *llm.Gateway           `json:"-"`
 	DB             *gorm.DB               `json:"-"`
+	VectorDB       vectordb.Client        `json:"-"`
 }
 
 type LLMOverrideConfig struct {

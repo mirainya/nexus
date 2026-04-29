@@ -10,6 +10,7 @@ import (
 	"github.com/mirainya/nexus/internal/service"
 	"github.com/mirainya/nexus/internal/sse"
 	"github.com/mirainya/nexus/pkg/config"
+	"github.com/mirainya/nexus/pkg/vectordb"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
 	"gorm.io/gorm"
@@ -50,7 +51,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	reviewSvc := service.NewReviewService(db)
 	entitySvc := service.NewEntityService(db)
 	llmProviderSvc := service.NewLLMProviderService(db, gw)
-	searchSvc := service.NewSearchService(db, gw)
+	searchSvc := service.NewSearchService(db, gw, vectordb.Default())
 	statsSvc := service.NewStatsService(db)
 	graphSvc := service.NewGraphService(db)
 	credentialSvc := service.NewCredentialService(db)
