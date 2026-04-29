@@ -30,10 +30,11 @@ type XFileStorageConfig struct {
 }
 
 type ServerConfig struct {
-	Port         int            `mapstructure:"port"`
-	GRPCPort     int            `mapstructure:"grpc_port"`
-	JWTSecret    string         `mapstructure:"jwt_secret"`
-	RateLimit    RateLimitConfig `mapstructure:"rate_limit"`
+	Port             int             `mapstructure:"port"`
+	GRPCPort         int             `mapstructure:"grpc_port"`
+	JWTSecret        string          `mapstructure:"jwt_secret"`
+	CredentialSecret string          `mapstructure:"credential_secret"`
+	RateLimit        RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 type RateLimitConfig struct {

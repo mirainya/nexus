@@ -30,13 +30,15 @@ func NewJobService(client *asynq.Client) *JobService {
 }
 
 type JobSubmitRequest struct {
-	Content     string         `json:"content"`
-	Type        string         `json:"type" binding:"required"`
-	SourceURL   string         `json:"source_url"`
-	PipelineID  uint           `json:"pipeline_id" binding:"required"`
-	CallbackURL string         `json:"callback_url"`
-	SkipCache   bool           `json:"skip_cache"`
-	Metadata    map[string]any `json:"metadata"`
+	Content      string         `json:"content"`
+	Type         string         `json:"type" binding:"required"`
+	SourceURL    string         `json:"source_url"`
+	PipelineID   uint           `json:"pipeline_id" binding:"required"`
+	CallbackURL  string         `json:"callback_url"`
+	SkipCache    bool           `json:"skip_cache"`
+	Metadata     map[string]any `json:"metadata"`
+	CredentialID *uint          `json:"credential_id"`
+	APIKeyID     *uint          `json:"-"`
 }
 
 func (s *JobService) computeContentHash(req JobSubmitRequest, pipelineUpdatedAt time.Time) string {
@@ -50,6 +52,19 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 	var p model.Pipeline
 	if err := model.DB().Select("id, updated_at").First(&p, req.PipelineID).Error; err != nil {
 		return nil, fmt.Errorf("pipeline not found: %w", err)
+	}
+
+	if req.CredentialID != nil {
+		var cred model.Credential
+		if err := model.DB().First(&cred, *req.CredentialID).Error; err != nil {
+			return nil, fmt.Errorf("credential not found: %w", err)
+		}
+		if req.APIKeyID != nil && cred.APIKeyID != *req.APIKeyID {
+			return nil, errors.New("credential does not belong to this api key")
+		}
+		if !cred.Active {
+			return nil, errors.New("credential is inactive")
+		}
 	}
 
 	contentHash := s.computeContentHash(req, p.UpdatedAt)
@@ -77,12 +92,14 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 	}
 
 	job := model.Job{
-		UUID:        uuid.New().String(),
-		DocumentID:  doc.ID,
-		PipelineID:  req.PipelineID,
-		Status:      "pending",
-		ContentHash: contentHash,
-		CallbackURL: req.CallbackURL,
+		UUID:         uuid.New().String(),
+		DocumentID:   doc.ID,
+		PipelineID:   req.PipelineID,
+		Status:       "pending",
+		ContentHash:  contentHash,
+		CallbackURL:  req.CallbackURL,
+		APIKeyID:     req.APIKeyID,
+		CredentialID: req.CredentialID,
 	}
 	if err := model.DB().Create(&job).Error; err != nil {
 		return nil, err
@@ -155,6 +172,21 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		},
 	}
 
+	if job.CredentialID != nil {
+		credSvc := NewCredentialService()
+		cred, apiKey, err := credSvc.GetDecrypted(*job.CredentialID)
+		if err != nil {
+			model.DB().Model(&job).Updates(map[string]any{"status": "failed", "error": "credential error: " + err.Error()})
+			return err
+		}
+		pctx.LLMOverride = &pipeline.LLMOverrideConfig{
+			ProviderType: cred.ProviderType,
+			APIKey:       apiKey,
+			BaseURL:      cred.BaseURL,
+			Model:        cred.DefaultModel,
+		}
+	}
+
 	totalSteps := len(p.Steps)
 	model.DB().Model(&job).Update("total_steps", totalSteps)
 
@@ -193,6 +225,21 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 				Where("job_id = ? AND step_order = ?", job.ID, stepOrder).
 				Updates(updates)
 			model.DB().Model(&job).Update("current_step", stepOrder+1)
+
+			if job.APIKeyID != nil && log.Tokens > 0 {
+				today := time.Now().Format("2006-01-02")
+				var usage model.APIUsage
+				result := model.DB().Where("api_key_id = ? AND date = ?", *job.APIKeyID, today).First(&usage)
+				if result.Error != nil {
+					usage = model.APIUsage{APIKeyID: *job.APIKeyID, Date: today, Requests: 1, Tokens: int64(log.Tokens)}
+					model.DB().Create(&usage)
+				} else {
+					model.DB().Model(&usage).Updates(map[string]any{
+						"requests": usage.Requests + 1,
+						"tokens":   usage.Tokens + int64(log.Tokens),
+					})
+				}
+			}
 
 			evt := sse.Event{
 				Type:      "step_end",

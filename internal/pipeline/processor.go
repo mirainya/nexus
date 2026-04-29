@@ -13,6 +13,14 @@ type ProcessorContext struct {
 	StepLogs       []StepLog              `json:"step_logs"`
 	SourceImageURL string                 `json:"-"`
 	ImageBase64    string                 `json:"-"`
+	LLMOverride    *LLMOverrideConfig     `json:"-"`
+}
+
+type LLMOverrideConfig struct {
+	ProviderType string
+	APIKey       string
+	BaseURL      string
+	Model        string
 }
 
 type DocumentData struct {

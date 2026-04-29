@@ -21,6 +21,8 @@ func AutoMigrate() error {
 		&JobStepLog{},
 		&Review{},
 		&LLMProvider{},
+		&Credential{},
+		&APIUsage{},
 	)
 }
 

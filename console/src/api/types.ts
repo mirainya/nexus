@@ -253,6 +253,58 @@ export interface GraphData {
   edges: GraphEdge[];
 }
 
+// API Key
+export interface APIKey {
+  id: number;
+  name: string;
+  key: string;
+  active: boolean;
+  expires_at: string | null;
+  daily_limit: number;
+  monthly_limit: number;
+  daily_tokens: number;
+  monthly_tokens: number;
+  created_at: string;
+}
+
+export interface APIKeyCreateRequest {
+  name: string;
+  expires_at?: string;
+  daily_limit?: number;
+  monthly_limit?: number;
+  daily_tokens?: number;
+  monthly_tokens?: number;
+}
+
+// Credential
+export interface Credential {
+  id: number;
+  api_key_id: number;
+  name: string;
+  provider_type: string;
+  base_url: string;
+  api_key: string;
+  default_model: string;
+  active: boolean;
+}
+
+export interface CredentialCreateRequest {
+  api_key_id: number;
+  name: string;
+  provider_type: string;
+  base_url: string;
+  api_key: string;
+  default_model?: string;
+}
+
+// API Usage
+export interface APIKeyUsage {
+  api_key_id: number;
+  date: string;
+  requests: number;
+  tokens: number;
+}
+
 // Upload
 export interface UploadResponse {
   url: string;

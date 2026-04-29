@@ -286,3 +286,74 @@ func (g *Gateway) CalcCost(providerName string, usage Usage) float64 {
 	outputCost := float64(usage.CompletionTokens) / 1_000_000 * p[1]
 	return inputCost + outputCost
 }
+
+func (g *Gateway) ChatWithCredential(ctx context.Context, req Request, providerType, apiKey, baseURL string) (*Response, error) {
+	var p Provider
+	switch providerType {
+	case "anthropic":
+		p = NewAnthropic(apiKey, baseURL)
+	case "doubao":
+		p = NewDoubao(apiKey, baseURL)
+	default:
+		p = NewOpenAI(apiKey, baseURL)
+	}
+
+	start := time.Now()
+	maxRetries := config.C.LLM.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = 1
+	}
+
+	var lastErr error
+	for i := range maxRetries {
+		resp, err := p.Chat(ctx, req)
+		if err == nil {
+			resp.Provider = providerType
+			duration := time.Since(start).Seconds()
+			metrics.LLMRequestsTotal.WithLabelValues(providerType, req.Model, "success").Inc()
+			metrics.LLMRequestDuration.WithLabelValues(providerType, req.Model).Observe(duration)
+			metrics.LLMTokensTotal.WithLabelValues(providerType, "input").Add(float64(resp.Usage.PromptTokens))
+			metrics.LLMTokensTotal.WithLabelValues(providerType, "output").Add(float64(resp.Usage.CompletionTokens))
+			return resp, nil
+		}
+		lastErr = err
+
+		backoff := retryBackoff(i, err)
+		logger.Warn("llm credential call failed, retrying",
+			zap.String("provider", providerType),
+			zap.Int("attempt", i+1),
+			zap.Duration("backoff", backoff))
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(backoff):
+		}
+	}
+	metrics.LLMRequestsTotal.WithLabelValues(providerType, req.Model, "error").Inc()
+	return nil, fmt.Errorf("all retries failed for credential provider %s: %w", providerType, lastErr)
+}
+
+func (g *Gateway) EmbeddingWithCredential(ctx context.Context, req EmbeddingRequest, providerType, apiKey, baseURL string) (*EmbeddingResponse, error) {
+	var p Provider
+	switch providerType {
+	case "anthropic":
+		p = NewAnthropic(apiKey, baseURL)
+	case "doubao":
+		p = NewDoubao(apiKey, baseURL)
+	default:
+		p = NewOpenAI(apiKey, baseURL)
+	}
+
+	ep, ok := p.(EmbeddingProvider)
+	if !ok {
+		return nil, fmt.Errorf("provider %s does not support embedding", providerType)
+	}
+
+	resp, err := ep.Embedding(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	resp.Provider = providerType
+	return resp, nil
+}

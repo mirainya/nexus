@@ -52,13 +52,21 @@ function EntityPieChart({ data }: { data: DashboardStats['entities']['distributi
       </Card>
     );
   }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+  const top = sorted.slice(0, 8);
+  const rest = sorted.slice(8);
+  const merged = rest.length > 0
+    ? [...top, { type: '其他', count: rest.reduce((s, r) => s + r.count, 0) }]
+    : top;
+
   return (
     <Card>
       <h3 className="text-sm font-medium text-gray-600 mb-4">实体类型分布</h3>
       <ResponsiveContainer width="100%" height={260}>
         <PieChart>
-          <Pie data={data} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={90} label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}>
-            {data.map((_, i) => (
+          <Pie data={merged} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={90} label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}>
+            {merged.map((_, i) => (
               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}
           </Pie>

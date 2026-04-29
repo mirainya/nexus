@@ -41,7 +41,7 @@ func (p *ImageAssess) Process(ctx context.Context, pctx *pipeline.ProcessorConte
 		userMsg = llm.Message{Role: "user", Content: "请根据以上要求进行评估。"}
 	}
 
-	resp, err := llm.G.Chat(ctx, llm.Request{
+	resp, err := doChat(ctx, pctx, llm.Request{
 		Provider: provider,
 		Model:    model,
 		Messages: []llm.Message{

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Graph from 'graphology';
+import { MultiDirectedGraph } from 'graphology';
+
 import { SigmaContainer, useLoadGraph, useRegisterEvents, useSigma, ControlsContainer, ZoomControl, FullScreenControl } from '@react-sigma/core';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import '@react-sigma/core/lib/style.css';
@@ -27,7 +28,7 @@ function GraphLoader({ data }: { data: GraphData }) {
   const loadGraph = useLoadGraph();
 
   useEffect(() => {
-    const graph = new Graph();
+    const graph = new MultiDirectedGraph();
     data.nodes.forEach((node) => {
       graph.addNode(String(node.id), {
         label: node.label,
@@ -128,6 +129,7 @@ export default function GraphPage() {
     queryFn: () => graphApi.getData(200),
   });
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const sigmaGraph = useMemo(() => new MultiDirectedGraph(), []);
 
   const graphData = (data as any)?.data as GraphData | undefined;
   const types = [...new Set(graphData?.nodes.map((n) => n.type) ?? [])];
@@ -152,10 +154,12 @@ export default function GraphPage() {
   return (
     <div>
       <PageHeader title="知识图谱" description={`${graphData.nodes.length} 个实体，${graphData.edges.length} 条关系`} />
-      <Card className="relative p-0 overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="relative p-0 overflow-hidden bg-surface-card rounded-2xl border border-border-soft" style={{ height: 'calc(100vh - 180px)' }}>
         <SigmaContainer
+          graph={sigmaGraph}
           style={{ width: '100%', height: '100%' }}
           settings={{
+            allowInvalidContainer: true,
             defaultEdgeColor: '#e2e8f0',
             defaultEdgeType: 'arrow',
             labelRenderedSizeThreshold: 8,
@@ -173,7 +177,7 @@ export default function GraphPage() {
         </SigmaContainer>
         <Legend types={types} />
         <NodeDetail nodeId={selectedNode} data={graphData} />
-      </Card>
+      </div>
     </div>
   );
 }

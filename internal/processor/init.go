@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -27,7 +28,6 @@ func parseJSON(s string, v any) error {
 
 var urlRe = regexp.MustCompile(`https?://\S+`)
 
-// buildUserMessage creates a multimodal message for image documents or a plain text message otherwise.
 func buildUserMessage(pctx *pipeline.ProcessorContext, text string) llm.Message {
 	if pctx.Document.Type == "image" {
 		imageURL := pctx.Document.SourceURL
@@ -63,4 +63,30 @@ func buildUserMessage(pctx *pipeline.ProcessorContext, text string) llm.Message 
 		return llm.Message{Role: "user", Content: parts}
 	}
 	return llm.Message{Role: "user", Content: text}
+}
+
+func doChat(ctx context.Context, pctx *pipeline.ProcessorContext, req llm.Request) (*llm.Response, error) {
+	if o := pctx.LLMOverride; o != nil {
+		if req.Provider == "" {
+			req.Provider = o.ProviderType
+		}
+		if req.Model == "" {
+			req.Model = o.Model
+		}
+		return llm.G.ChatWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
+	}
+	return llm.G.Chat(ctx, req)
+}
+
+func doEmbedding(ctx context.Context, pctx *pipeline.ProcessorContext, req llm.EmbeddingRequest) (*llm.EmbeddingResponse, error) {
+	if o := pctx.LLMOverride; o != nil {
+		if req.Provider == "" {
+			req.Provider = o.ProviderType
+		}
+		if req.Model == "" {
+			req.Model = o.Model
+		}
+		return llm.G.EmbeddingWithCredential(ctx, req, o.ProviderType, o.APIKey, o.BaseURL)
+	}
+	return llm.G.Embedding(ctx, req)
 }

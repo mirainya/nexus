@@ -55,7 +55,7 @@ func (p *LLMExtract) Process(ctx context.Context, pctx *pipeline.ProcessorContex
 		userContent = userContent + "\n\n参考信息：\n" + strings.Join(extras, "\n")
 	}
 
-	resp, err := llm.G.Chat(ctx, llm.Request{
+	resp, err := doChat(ctx, pctx, llm.Request{
 		Provider: provider,
 		Model:    model,
 		Messages: []llm.Message{

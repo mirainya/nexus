@@ -18,6 +18,11 @@ import type {
   PaginatedData,
   DashboardStats,
   GraphData,
+  APIKey,
+  APIKeyCreateRequest,
+  Credential,
+  CredentialCreateRequest,
+  APIKeyUsage,
 } from './types';
 
 const api = axios.create({
@@ -118,4 +123,19 @@ export const statsApi = {
 
 export const graphApi = {
   getData: (limit?: number) => api.get<unknown, GraphData>('/admin/graph', { params: { limit } }),
+};
+
+export const apiKeyApi = {
+  list: () => api.get<unknown, APIKey[]>('/admin/api-keys'),
+  create: (data: APIKeyCreateRequest) => api.post<unknown, APIKey>('/admin/api-keys', data),
+  update: (id: number, data: Partial<APIKeyCreateRequest & { active?: boolean }>) => api.put<unknown, APIKey>(`/admin/api-keys/${id}`, data),
+  delete: (id: number) => api.delete(`/admin/api-keys/${id}`),
+  usage: (id: number, days?: number) => api.get<unknown, APIKeyUsage[]>(`/admin/api-keys/${id}/usage`, { params: { days } }),
+};
+
+export const credentialApi = {
+  list: (apiKeyId?: number) => api.get<unknown, Credential[]>('/admin/credentials', { params: apiKeyId ? { api_key_id: apiKeyId } : {} }),
+  create: (data: CredentialCreateRequest) => api.post<unknown, Credential>('/admin/credentials', data),
+  update: (id: number, data: Partial<CredentialCreateRequest & { active?: boolean }>) => api.put<unknown, Credential>(`/admin/credentials/${id}`, data),
+  delete: (id: number) => api.delete(`/admin/credentials/${id}`),
 };

@@ -30,6 +30,11 @@ func (h *JobHandler) Submit(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, "content is required for text type"))
 		return
 	}
+	if apiKeyID, exists := c.Get("api_key_id"); exists {
+		if id, ok := apiKeyID.(uint); ok {
+			req.APIKeyID = &id
+		}
+	}
 	job, err := h.svc.Submit(req)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))

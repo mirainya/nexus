@@ -31,7 +31,7 @@ func (p *EntityAlign) Process(ctx context.Context, pctx *pipeline.ProcessorConte
 	provider, _ := cfg.Config["provider"].(string)
 	model, _ := cfg.Config["model"].(string)
 
-	resp, err := llm.G.Chat(ctx, llm.Request{
+	resp, err := doChat(ctx, pctx, llm.Request{
 		Provider: provider,
 		Model:    model,
 		Messages: []llm.Message{

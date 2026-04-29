@@ -24,7 +24,7 @@ func (p *Embedding) Process(ctx context.Context, pctx *pipeline.ProcessorContext
 		text = pctx.Summary
 	}
 
-	resp, err := llm.G.Embedding(ctx, llm.EmbeddingRequest{
+	resp, err := doEmbedding(ctx, pctx, llm.EmbeddingRequest{
 		Provider: provider,
 		Model:    model,
 		Input:    text,

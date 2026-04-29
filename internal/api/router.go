@@ -51,12 +51,14 @@ func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 	searchH := handler.NewSearchHandler()
 	statsH := handler.NewStatsHandler()
 	graphH := handler.NewGraphHandler()
+	credentialH := handler.NewCredentialHandler()
+	apiKeyH := handler.NewAPIKeyHandler()
 
 	// Auth (no middleware)
 	r.POST("/api/admin/auth/login", authH.Login)
 
 	// 对外 API（API Key 认证）
-	v1 := r.Group("/api/v1", middleware.APIKeyAuth())
+	v1 := r.Group("/api/v1", middleware.APIKeyAuth(), middleware.QuotaCheck())
 	{
 		v1.POST("/parse", parseH.Parse)
 		v1.POST("/jobs", jobH.Submit)
@@ -115,6 +117,17 @@ func SetupRouter(asynqClient *asynq.Client) *gin.Engine {
 		admin.GET("/stats", statsH.Dashboard)
 
 		admin.GET("/graph", graphH.GetGraph)
+
+		admin.GET("/credentials", credentialH.List)
+		admin.POST("/credentials", credentialH.Create)
+		admin.PUT("/credentials/:id", credentialH.Update)
+		admin.DELETE("/credentials/:id", credentialH.Delete)
+
+		admin.GET("/api-keys", apiKeyH.List)
+		admin.POST("/api-keys", apiKeyH.Create)
+		admin.PUT("/api-keys/:id", apiKeyH.Update)
+		admin.DELETE("/api-keys/:id", apiKeyH.Delete)
+		admin.GET("/api-keys/:id/usage", apiKeyH.Usage)
 	}
 
 	console.RegisterRoutes(r)
