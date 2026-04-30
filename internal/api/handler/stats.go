@@ -18,7 +18,7 @@ func NewStatsHandler(svc *service.StatsService) *StatsHandler {
 }
 
 func (h *StatsHandler) Dashboard(c *gin.Context) {
-	stats, err := h.svc.GetDashboardStats()
+	stats, err := h.svc.GetDashboardStats(getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

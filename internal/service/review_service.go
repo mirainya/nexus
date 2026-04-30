@@ -11,10 +11,13 @@ type ReviewService struct{ db *gorm.DB }
 
 func NewReviewService(db *gorm.DB) *ReviewService { return &ReviewService{db: db} }
 
-func (s *ReviewService) List(status string, page, pageSize int) ([]model.Review, int64, error) {
+func (s *ReviewService) List(status string, page, pageSize int, tenantID uint) ([]model.Review, int64, error) {
 	var list []model.Review
 	var total int64
 	q := s.db.Model(&model.Review{})
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}

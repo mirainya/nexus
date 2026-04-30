@@ -16,6 +16,7 @@ type Job struct {
 	Error        string         `gorm:"type:text" json:"error,omitempty"`
 	APIKeyID     *uint          `gorm:"index" json:"api_key_id,omitempty"`
 	CredentialID *uint          `gorm:"index" json:"credential_id,omitempty"`
+	TenantID     uint           `gorm:"not null;index" json:"tenant_id"`
 	Document     Document       `gorm:"foreignKey:DocumentID" json:"document,omitempty"`
 	Pipeline     Pipeline       `gorm:"foreignKey:PipelineID" json:"pipeline,omitempty"`
 	StepLogs     []JobStepLog   `gorm:"foreignKey:JobID" json:"step_logs,omitempty"`

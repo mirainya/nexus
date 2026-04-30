@@ -27,13 +27,17 @@ type GraphData struct {
 	Edges []GraphEdge `json:"edges"`
 }
 
-func (s *GraphService) GetGraphData(limit int) (*GraphData, error) {
+func (s *GraphService) GetGraphData(limit int, tenantID uint) (*GraphData, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
 
 	var entities []model.Entity
-	if err := s.db.Limit(limit).Find(&entities).Error; err != nil {
+	q := s.db.Limit(limit)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	if err := q.Find(&entities).Error; err != nil {
 		return nil, err
 	}
 
@@ -50,7 +54,11 @@ func (s *GraphService) GetGraphData(limit int) (*GraphData, error) {
 	}
 
 	var relations []model.Relation
-	if err := s.db.Find(&relations).Error; err != nil {
+	rq := s.db.Model(&model.Relation{})
+	if tenantID > 0 {
+		rq = rq.Where("tenant_id = ?", tenantID)
+	}
+	if err := rq.Find(&relations).Error; err != nil {
 		return nil, err
 	}
 

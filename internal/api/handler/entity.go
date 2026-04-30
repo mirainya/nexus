@@ -19,7 +19,7 @@ func (h *EntityHandler) List(c *gin.Context) {
 	page, pageSize := parsePagination(c)
 	entityType := c.Query("type")
 	keyword := c.Query("keyword")
-	list, total, err := h.svc.List(entityType, keyword, page, pageSize)
+	list, total, err := h.svc.List(entityType, keyword, page, pageSize, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -32,7 +32,7 @@ func (h *EntityHandler) Get(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	e, err := h.svc.GetByID(id)
+	e, err := h.svc.GetByID(id, getTenantID(c))
 	if err != nil {
 		resp.NotFound(c, errors.ErrNotFound)
 		return
@@ -45,7 +45,7 @@ func (h *EntityHandler) GetRelations(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	list, err := h.svc.GetRelations(id)
+	list, err := h.svc.GetRelations(id, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

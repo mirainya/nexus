@@ -10,4 +10,5 @@ type Review struct {
 	OriginalData datatypes.JSON `gorm:"type:jsonb" json:"original_data"`
 	ModifiedData datatypes.JSON `gorm:"type:jsonb" json:"modified_data"`
 	Reviewer     string         `gorm:"type:varchar(100)" json:"reviewer"`
+	TenantID     uint           `gorm:"not null;index" json:"tenant_id"`
 }

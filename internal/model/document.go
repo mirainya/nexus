@@ -11,4 +11,5 @@ type Document struct {
 	Metadata  datatypes.JSON `gorm:"type:jsonb" json:"metadata"`
 	Status    string         `gorm:"type:varchar(20);index;default:pending" json:"status"`
 	FilePath  string         `gorm:"type:varchar(512)" json:"file_path"`
+	TenantID  uint           `gorm:"not null;index" json:"tenant_id"`
 }

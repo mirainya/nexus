@@ -27,9 +27,10 @@ func NewSearchService(db *gorm.DB, gw *llm.Gateway, vec vectordb.Client) *Search
 }
 
 type SearchRequest struct {
-	Query string `json:"query" binding:"required"`
-	Limit int    `json:"limit"`
-	Mode  string `json:"mode"`
+	Query    string `json:"query" binding:"required"`
+	Limit    int    `json:"limit"`
+	Mode     string `json:"mode"`
+	TenantID uint   `json:"-"`
 }
 
 type SearchStats struct {
@@ -93,7 +94,7 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 		if len(vecUUIDs) == 0 {
 			return result, nil
 		}
-		items, err := s.queryDocuments(ParsedQuery{}, limit, vecUUIDs)
+		items, err := s.queryDocuments(ParsedQuery{}, limit, vecUUIDs, req.TenantID)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +109,7 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 	case "keyword":
 		parsed := s.parseIntent(ctx, req.Query)
 		result.Query = parsed
-		items, err := s.queryDocuments(parsed, limit, nil)
+		items, err := s.queryDocuments(parsed, limit, nil, req.TenantID)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +128,7 @@ func (s *SearchService) Search(ctx context.Context, req SearchRequest) (*SearchR
 		parsed := s.parseIntent(ctx, req.Query)
 		result.Query = parsed
 		vecUUIDs, vecScores := s.vectorRecall(ctx, req.Query, limit)
-		items, err := s.queryDocuments(parsed, limit, vecUUIDs)
+		items, err := s.queryDocuments(parsed, limit, vecUUIDs, req.TenantID)
 		if err != nil {
 			return nil, err
 		}
@@ -263,11 +264,15 @@ type docRow struct {
 	JobResult json.RawMessage `gorm:"column:job_result"`
 }
 
-func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []string) ([]SearchItem, error) {
+func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []string, tenantID uint) ([]SearchItem, error) {
 	q := s.db.Table("documents d").
 		Select("d.*, j.result as job_result").
 		Joins("LEFT JOIN jobs j ON j.document_id = d.id AND j.status = 'completed'").
 		Where("d.deleted_at IS NULL")
+
+	if tenantID > 0 {
+		q = q.Where("d.tenant_id = ?", tenantID)
+	}
 
 	hasCondition := false
 
@@ -276,6 +281,10 @@ func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []str
 		Select("d.*, j.result as job_result").
 		Joins("LEFT JOIN jobs j ON j.document_id = d.id AND j.status = 'completed'").
 		Where("d.deleted_at IS NULL")
+
+	if tenantID > 0 {
+		keywordScope = keywordScope.Where("d.tenant_id = ?", tenantID)
+	}
 
 	if pq.Entity != "" {
 		keywordScope = keywordScope.Where("d.id IN (SELECT source_id FROM entities WHERE deleted_at IS NULL AND (name ILIKE ? OR aliases::text ILIKE ?))",
@@ -324,7 +333,7 @@ func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []str
 		docIDs[i] = r.ID
 	}
 
-	entityMap := s.loadEntitiesForDocs(docIDs)
+	entityMap := s.loadEntitiesForDocs(docIDs, tenantID)
 
 	items := make([]SearchItem, 0, len(rows))
 	for _, r := range rows {
@@ -350,12 +359,16 @@ func (s *SearchService) queryDocuments(pq ParsedQuery, limit int, vecUUIDs []str
 	return items, nil
 }
 
-func (s *SearchService) loadEntitiesForDocs(docIDs []uint) map[uint][]EntityBrief {
+func (s *SearchService) loadEntitiesForDocs(docIDs []uint, tenantID uint) map[uint][]EntityBrief {
 	if len(docIDs) == 0 {
 		return nil
 	}
 	var entities []model.Entity
-	s.db.Where("source_id IN ? AND deleted_at IS NULL", docIDs).Find(&entities)
+	q := s.db.Where("source_id IN ? AND deleted_at IS NULL", docIDs)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	q.Find(&entities)
 
 	m := make(map[uint][]EntityBrief)
 	for _, e := range entities {

@@ -154,7 +154,7 @@ func TestJobService_GetByUUID(t *testing.T) {
 		PipelineID: p.ID,
 	})
 
-	found, err := svc.GetByUUID(job.UUID)
+	found, err := svc.GetByUUID(job.UUID, 0)
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestJobService_GetByUUID(t *testing.T) {
 
 func TestJobService_GetByUUID_NotFound(t *testing.T) {
 	svc := NewJobService(testDB, nil, nil, nil)
-	_, err := svc.GetByUUID("nonexistent-uuid")
+	_, err := svc.GetByUUID("nonexistent-uuid", 0)
 	if err == nil {
 		t.Error("expected error for nonexistent UUID")
 	}
@@ -208,7 +208,7 @@ func TestJobService_List(t *testing.T) {
 		})
 	}
 
-	jobs, total, err := svc.List(1, 3, "")
+	jobs, total, err := svc.List(1, 3, "", 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestJobService_List_FilterByStatus(t *testing.T) {
 	})
 	testDB.Model(job).Update("status", "completed")
 
-	jobs, _, err := svc.List(1, 100, "completed")
+	jobs, _, err := svc.List(1, 100, "completed", 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestResultPersister_PersistResults(t *testing.T) {
 		},
 	}
 
-	err := persister.Persist(pctx, doc.ID)
+	err := persister.Persist(pctx, doc.ID, 0)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestResultPersister_ExistingEntity(t *testing.T) {
 		},
 	}
 
-	err := persister.Persist(pctx, doc.ID)
+	err := persister.Persist(pctx, doc.ID, 0)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}

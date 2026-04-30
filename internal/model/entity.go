@@ -13,4 +13,5 @@ type Entity struct {
 	Confirmed  bool           `gorm:"default:false" json:"confirmed"`
 	SourceID   uint           `gorm:"index" json:"source_id"`
 	Evidence   datatypes.JSON `gorm:"type:jsonb" json:"evidence"`
+	TenantID   uint           `gorm:"not null;index" json:"tenant_id"`
 }

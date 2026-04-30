@@ -16,7 +16,7 @@ func TestEntityService_List(t *testing.T) {
 	testDB.Create(&model.Entity{UUID: "ent-list-2", Type: "org", Name: "Acme", SourceID: 1})
 
 	config.C.Database.Driver = "sqlite"
-	list, total, err := svc.List("", "", 1, 10)
+	list, total, err := svc.List("", "", 1, 10, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestEntityService_List_FilterByType(t *testing.T) {
 	testDB.Create(&model.Entity{UUID: "ent-filter-1", Type: "person", Name: "Bob", SourceID: 1})
 	testDB.Create(&model.Entity{UUID: "ent-filter-2", Type: "location", Name: "Tokyo", SourceID: 1})
 
-	list, _, err := svc.List("location", "", 1, 10)
+	list, _, err := svc.List("location", "", 1, 10, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestEntityService_List_Keyword(t *testing.T) {
 
 	testDB.Create(&model.Entity{UUID: "ent-kw-1", Type: "person", Name: "Charlie", SourceID: 1})
 
-	list, _, err := svc.List("", "Charlie", 1, 10)
+	list, _, err := svc.List("", "Charlie", 1, 10, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestEntityService_GetByID(t *testing.T) {
 	e := model.Entity{UUID: "ent-get-1", Type: "person", Name: "Dave", SourceID: 1}
 	testDB.Create(&e)
 
-	got, err := svc.GetByID(e.ID)
+	got, err := svc.GetByID(e.ID, 0)
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestEntityService_GetRelations(t *testing.T) {
 	testDB.Create(&e2)
 	testDB.Create(&model.Relation{UUID: "rel-1", FromEntityID: e1.ID, ToEntityID: e2.ID, Type: "knows", SourceID: 1})
 
-	rels, err := svc.GetRelations(e1.ID)
+	rels, err := svc.GetRelations(e1.ID, 0)
 	if err != nil {
 		t.Fatalf("get relations: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestReviewService_List(t *testing.T) {
 	testDB.Create(&model.Review{Status: "pending"})
 	testDB.Create(&model.Review{Status: "approved"})
 
-	list, total, err := svc.List("", 1, 10)
+	list, total, err := svc.List("", 1, 10, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestReviewService_List(t *testing.T) {
 func TestReviewService_List_FilterByStatus(t *testing.T) {
 	svc := NewReviewService(testDB)
 
-	list, _, err := svc.List("pending", 1, 100)
+	list, _, err := svc.List("pending", 1, 100, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

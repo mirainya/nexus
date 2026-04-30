@@ -12,4 +12,5 @@ type APIKey struct {
 	MonthlyLimit  int        `gorm:"default:0" json:"monthly_limit"`
 	DailyTokens   int64      `gorm:"default:0" json:"daily_tokens"`
 	MonthlyTokens int64      `gorm:"default:0" json:"monthly_tokens"`
+	TenantID      uint       `gorm:"not null;index" json:"tenant_id"`
 }

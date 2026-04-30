@@ -18,7 +18,7 @@ func NewReviewHandler(svc *service.ReviewService) *ReviewHandler {
 func (h *ReviewHandler) List(c *gin.Context) {
 	page, pageSize := parsePagination(c)
 	status := c.Query("status")
-	list, total, err := h.svc.List(status, page, pageSize)
+	list, total, err := h.svc.List(status, page, pageSize, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

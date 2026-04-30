@@ -50,29 +50,43 @@ type DailyTrendItem struct {
 	Failed    int64  `json:"failed"`
 }
 
-func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
-	db := s.db
+func (s *StatsService) GetDashboardStats(tenantID uint) (*DashboardStats, error) {
 	stats := &DashboardStats{}
 
-	db.Model(&model.Job{}).Count(&stats.Jobs.Total)
-	db.Model(&model.Job{}).Where("status = ?", "completed").Count(&stats.Jobs.Completed)
-	db.Model(&model.Job{}).Where("status = ?", "failed").Count(&stats.Jobs.Failed)
-	db.Model(&model.Job{}).Where("status = ?", "running").Count(&stats.Jobs.Running)
-	db.Model(&model.Job{}).Where("status = ?", "pending").Count(&stats.Jobs.Pending)
+	jobQ := s.db.Model(&model.Job{})
+	if tenantID > 0 {
+		jobQ = jobQ.Where("tenant_id = ?", tenantID)
+	}
+
+	jobQ.Count(&stats.Jobs.Total)
+	s.countJobStatus(tenantID, "completed", &stats.Jobs.Completed)
+	s.countJobStatus(tenantID, "failed", &stats.Jobs.Failed)
+	s.countJobStatus(tenantID, "running", &stats.Jobs.Running)
+	s.countJobStatus(tenantID, "pending", &stats.Jobs.Pending)
 
 	var llmResult struct {
 		Tokens int64
 		Cost   float64
 	}
-	db.Model(&model.JobStepLog{}).
-		Select("COALESCE(SUM(tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost").
+	llmQ := s.db.Model(&model.JobStepLog{})
+	if tenantID > 0 {
+		llmQ = llmQ.Where("job_id IN (SELECT id FROM jobs WHERE tenant_id = ?)", tenantID)
+	}
+	llmQ.Select("COALESCE(SUM(tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost").
 		Scan(&llmResult)
 	stats.LLM.TotalTokens = llmResult.Tokens
 	stats.LLM.TotalCost = llmResult.Cost
 
-	db.Model(&model.Entity{}).Count(&stats.Entities.Total)
-	db.Model(&model.Entity{}).
-		Select("type, COUNT(*) as count").
+	entityQ := s.db.Model(&model.Entity{})
+	if tenantID > 0 {
+		entityQ = entityQ.Where("tenant_id = ?", tenantID)
+	}
+	entityQ.Count(&stats.Entities.Total)
+	distQ := s.db.Model(&model.Entity{})
+	if tenantID > 0 {
+		distQ = distQ.Where("tenant_id = ?", tenantID)
+	}
+	distQ.Select("type, COUNT(*) as count").
 		Group("type").
 		Scan(&stats.Entities.Distribution)
 
@@ -83,12 +97,15 @@ func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
 		Completed int64
 		Failed    int64
 	}
-	db.Model(&model.Job{}).
+	trendQ := s.db.Model(&model.Job{}).
 		Select("DATE(created_at) as date, COUNT(*) as total, "+
 			"SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, "+
 			"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed").
-		Where("created_at >= ?", since).
-		Group("DATE(created_at)").
+		Where("created_at >= ?", since)
+	if tenantID > 0 {
+		trendQ = trendQ.Where("tenant_id = ?", tenantID)
+	}
+	trendQ.Group("DATE(created_at)").
 		Order("date").
 		Scan(&dailyRows)
 
@@ -421,6 +438,14 @@ func (s *StatsService) GetErrorAnalysis(days int) (*ErrorAnalysis, error) {
 		TopErrors:      topErrors,
 		RecentFailures: recent,
 	}, nil
+}
+
+func (s *StatsService) countJobStatus(tenantID uint, status string, out *int64) {
+	q := s.db.Model(&model.Job{}).Where("status = ?", status)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	q.Count(out)
 }
 
 func (s *StatsService) formatDuration(ms float64) string {

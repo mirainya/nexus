@@ -13,7 +13,7 @@ type ResultPersister struct{ db *gorm.DB }
 
 func NewResultPersister(db *gorm.DB) *ResultPersister { return &ResultPersister{db: db} }
 
-func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint) error {
+func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint, tenantID uint) error {
 	return p.db.Transaction(func(tx *gorm.DB) error {
 		entityNameToID := make(map[string]uint)
 
@@ -69,6 +69,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 					Confidence: e.Confidence,
 					SourceID:   sourceID,
 					Evidence:   evidenceJSON,
+					TenantID:   tenantID,
 				}
 				if err := tx.Create(&entity).Error; err != nil {
 					return err
@@ -80,6 +81,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 					EntityID:     &entity.ID,
 					Status:       "pending",
 					OriginalData: originalJSON,
+					TenantID:     tenantID,
 				}
 				if err := tx.Create(&review).Error; err != nil {
 					return err
@@ -102,6 +104,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				Metadata:     metaJSON,
 				Confidence:   r.Confidence,
 				SourceID:     sourceID,
+				TenantID:     tenantID,
 			}
 			if err := tx.Create(&rel).Error; err != nil {
 				return err

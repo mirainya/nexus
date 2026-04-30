@@ -56,6 +56,7 @@ type JobSubmitRequest struct {
 	Metadata     map[string]any `json:"metadata"`
 	CredentialID *uint          `json:"credential_id"`
 	APIKeyID     *uint          `json:"-"`
+	TenantID     uint           `json:"-"`
 }
 
 func (s *JobService) computeContentHash(req JobSubmitRequest, pipelineUpdatedAt time.Time) string {
@@ -88,7 +89,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 
 	if !req.SkipCache {
 		var cached model.Job
-		err := s.db.Where("content_hash = ? AND status = ?", contentHash, "completed").
+		err := s.db.Where("content_hash = ? AND status = ? AND tenant_id = ?", contentHash, "completed", req.TenantID).
 			Order("created_at DESC").First(&cached).Error
 		if err == nil {
 			return &cached, nil
@@ -103,6 +104,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		SourceURL: req.SourceURL,
 		Metadata:  metaJSON,
 		Status:    "pending",
+		TenantID:  req.TenantID,
 	}
 	if err := s.db.Create(&doc).Error; err != nil {
 		return nil, err
@@ -117,6 +119,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		CallbackURL:  req.CallbackURL,
 		APIKeyID:     req.APIKeyID,
 		CredentialID: req.CredentialID,
+		TenantID:     req.TenantID,
 	}
 	if err := s.db.Create(&job).Error; err != nil {
 		return nil, err
@@ -129,11 +132,15 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 	return &job, nil
 }
 
-func (s *JobService) GetByUUID(uuid string) (*model.Job, error) {
+func (s *JobService) GetByUUID(uuid string, tenantID uint) (*model.Job, error) {
 	var job model.Job
-	if err := s.db.Preload("StepLogs", func(db *gorm.DB) *gorm.DB {
+	q := s.db.Preload("StepLogs", func(db *gorm.DB) *gorm.DB {
 		return db.Order("step_order ASC")
-	}).Where("uuid = ?", uuid).First(&job).Error; err != nil {
+	}).Where("uuid = ?", uuid)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	if err := q.First(&job).Error; err != nil {
 		return nil, err
 	}
 	return &job, nil
@@ -279,7 +286,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "partial", "result": result}).Error; dbErr != nil {
 				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 			}
-			if persistErr := s.persister.Persist(pctx, doc.ID); persistErr != nil {
+			if persistErr := s.persister.Persist(pctx, doc.ID, job.TenantID); persistErr != nil {
 				if dbErr := s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()}).Error; dbErr != nil {
 					logger.Warn("failed to update job error", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 				}
@@ -296,7 +303,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		return err
 	}
 
-	if err := s.persister.Persist(pctx, doc.ID); err != nil {
+	if err := s.persister.Persist(pctx, doc.ID, job.TenantID); err != nil {
 		if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()}).Error; dbErr != nil {
 			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 		}
@@ -403,10 +410,13 @@ func (s *JobService) fireWebhook(job model.Job, event string, result any, errMsg
 	}, config.C.Server.JWTSecret)
 }
 
-func (s *JobService) List(page, pageSize int, status string) ([]model.Job, int64, error) {
+func (s *JobService) List(page, pageSize int, status string, tenantID uint) ([]model.Job, int64, error) {
 	var jobs []model.Job
 	var total int64
 	q := s.db.Model(&model.Job{})
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}

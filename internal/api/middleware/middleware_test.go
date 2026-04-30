@@ -264,7 +264,7 @@ func TestJWTAuth_InvalidToken(t *testing.T) {
 }
 
 func TestJWTAuth_ValidToken(t *testing.T) {
-	token, err := GenerateToken(1, "admin")
+	token, err := GenerateToken(1, "admin", nil)
 	if err != nil {
 		t.Fatalf("generate token: %v", err)
 	}

@@ -12,6 +12,7 @@ type Relation struct {
 	Confidence   float64        `gorm:"type:decimal(5,4)" json:"confidence"`
 	Confirmed    bool           `gorm:"default:false" json:"confirmed"`
 	SourceID     uint           `gorm:"index" json:"source_id"`
+	TenantID     uint           `gorm:"not null;index" json:"tenant_id"`
 	FromEntity   Entity         `gorm:"foreignKey:FromEntityID" json:"from_entity,omitempty"`
 	ToEntity     Entity         `gorm:"foreignKey:ToEntityID" json:"to_entity,omitempty"`
 }

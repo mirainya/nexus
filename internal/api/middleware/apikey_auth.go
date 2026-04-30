@@ -44,6 +44,7 @@ func APIKeyAuth(db *gorm.DB) gin.HandlerFunc {
 
 		c.Set("api_key_id", apiKey.ID)
 		c.Set("api_key_name", apiKey.Name)
+		c.Set("tenant_id", apiKey.TenantID)
 		c.Next()
 	}
 }

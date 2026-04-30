@@ -70,13 +70,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	h.attempts.Delete(key)
 
-	token, err := middleware.GenerateToken(user.ID, user.Username)
+	token, err := middleware.GenerateToken(user.ID, user.Username, user.TenantID)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, "failed to generate token"))
 		return
 	}
 
-	resp.Success(c, gin.H{"token": token, "username": user.Username})
+	result := gin.H{"token": token, "username": user.Username}
+	if user.TenantID != nil {
+		result["tenant_id"] = *user.TenantID
+	}
+	resp.Success(c, result)
 }
 
 func (h *AuthHandler) recordAttempt(key string) {

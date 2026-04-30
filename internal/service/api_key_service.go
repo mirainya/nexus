@@ -16,6 +16,7 @@ func NewAPIKeyService(db *gorm.DB) *APIKeyService { return &APIKeyService{db: db
 
 type APIKeyCreateRequest struct {
 	Name          string `json:"name" binding:"required"`
+	TenantID      uint   `json:"tenant_id" binding:"required"`
 	ExpiresAt     string `json:"expires_at"`
 	DailyLimit    int    `json:"daily_limit"`
 	MonthlyLimit  int    `json:"monthly_limit"`
@@ -37,6 +38,7 @@ type APIKeyResponse struct {
 	ID            uint       `json:"id"`
 	Name          string     `json:"name"`
 	Key           string     `json:"key"`
+	TenantID      uint       `json:"tenant_id"`
 	Active        bool       `json:"active"`
 	ExpiresAt     *time.Time `json:"expires_at"`
 	DailyLimit    int        `json:"daily_limit"`
@@ -75,6 +77,7 @@ func toAPIKeyResponse(k *model.APIKey, showFull bool) APIKeyResponse {
 		ID:            k.ID,
 		Name:          k.Name,
 		Key:           key,
+		TenantID:      k.TenantID,
 		Active:        k.Active,
 		ExpiresAt:     k.ExpiresAt,
 		DailyLimit:    k.DailyLimit,
@@ -90,6 +93,7 @@ func (s *APIKeyService) Create(req APIKeyCreateRequest) (*APIKeyResponse, error)
 		Name:          req.Name,
 		Key:           generateKey(),
 		Active:        true,
+		TenantID:      req.TenantID,
 		DailyLimit:    req.DailyLimit,
 		MonthlyLimit:  req.MonthlyLimit,
 		DailyTokens:   req.DailyTokens,

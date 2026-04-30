@@ -48,15 +48,22 @@ func JWTAuth() gin.HandlerFunc {
 
 		c.Set("user_id", claims["user_id"])
 		c.Set("username", claims["username"])
+		if tid, ok := claims["tenant_id"].(float64); ok {
+			c.Set("tenant_id", uint(tid))
+		}
 		c.Next()
 	}
 }
 
-func GenerateToken(userID uint, username string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+func GenerateToken(userID uint, username string, tenantID *uint) (string, error) {
+	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"username": username,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
-	})
+	}
+	if tenantID != nil {
+		claims["tenant_id"] = *tenantID
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(config.C.Server.JWTSecret))
 }

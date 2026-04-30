@@ -17,3 +17,15 @@ func parsePagination(c *gin.Context) (int, int) {
 	}
 	return page, pageSize
 }
+
+func getTenantID(c *gin.Context) uint {
+	if v, ok := c.Get("tenant_id"); ok {
+		switch tid := v.(type) {
+		case uint:
+			return tid
+		case float64:
+			return uint(tid)
+		}
+	}
+	return 0
+}
