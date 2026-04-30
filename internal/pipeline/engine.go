@@ -46,6 +46,12 @@ func (e *Engine) Run(ctx context.Context, p *model.Pipeline, pctx *ProcessorCont
 		fn(o)
 	}
 
+	if o.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, o.Timeout)
+		defer cancel()
+	}
+
 	if pctx.Document.Type == "image" && pctx.ImageBase64 == "" {
 		imageURL := pctx.Document.SourceURL
 		if imageURL == "" {

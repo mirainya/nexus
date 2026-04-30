@@ -46,6 +46,13 @@ func NewJobService(db *gorm.DB, client *asynq.Client, hub *sse.Hub, gw *llm.Gate
 	}
 }
 
+func (s *JobService) pipelineTimeout() time.Duration {
+	if m := config.C.Worker.PipelineTimeout; m > 0 {
+		return time.Duration(m) * time.Minute
+	}
+	return 30 * time.Minute
+}
+
 type JobSubmitRequest struct {
 	Content      string         `json:"content"`
 	Type         string         `json:"type" binding:"required"`
@@ -227,6 +234,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 
 	if err := s.engine.Run(ctx, &p, pctx,
 		pipeline.WithStartFrom(job.CurrentStep),
+		pipeline.WithTimeout(s.pipelineTimeout()),
 		pipeline.WithOnStepStart(func(stepOrder int, processorType string) {
 			now := time.Now()
 			if dbErr := s.db.Create(&model.JobStepLog{

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"time"
 
 	"github.com/mirainya/nexus/internal/llm"
 	"github.com/mirainya/nexus/pkg/vectordb"
@@ -83,6 +84,7 @@ type Processor interface {
 
 type RunOptions struct {
 	StartFrom   int
+	Timeout     time.Duration
 	OnProgress  func(stepOrder int)
 	OnStepStart func(stepOrder int, processorType string)
 	OnStepEnd   func(stepOrder int, processorType string, err error, log StepLog)
@@ -92,6 +94,10 @@ type RunOption func(*RunOptions)
 
 func WithStartFrom(step int) RunOption {
 	return func(o *RunOptions) { o.StartFrom = step }
+}
+
+func WithTimeout(d time.Duration) RunOption {
+	return func(o *RunOptions) { o.Timeout = d }
 }
 
 func WithOnProgress(fn func(stepOrder int)) RunOption {

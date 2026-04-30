@@ -92,8 +92,9 @@ type LLMProviderConfig struct {
 }
 
 type WorkerConfig struct {
-	Concurrency int `mapstructure:"concurrency"`
-	MaxRetry    int `mapstructure:"max_retry"`
+	Concurrency     int `mapstructure:"concurrency"`
+	MaxRetry        int `mapstructure:"max_retry"`
+	PipelineTimeout int `mapstructure:"pipeline_timeout"`
 }
 
 var C *Config

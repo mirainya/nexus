@@ -6,8 +6,16 @@ import (
 	"time"
 
 	"github.com/mirainya/nexus/internal/model"
+	"github.com/mirainya/nexus/pkg/config"
 	"gorm.io/gorm"
 )
+
+func durationMs(from, to string) string {
+	if config.C != nil && config.C.Database.Driver == "sqlite" {
+		return fmt.Sprintf("(julianday(%s) - julianday(%s)) * 86400000", to, from)
+	}
+	return fmt.Sprintf("EXTRACT(EPOCH FROM (%s - %s)) * 1000", to, from)
+}
 
 type StatsService struct{ db *gorm.DB }
 
@@ -172,7 +180,7 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 	jq := s.db.Model(&model.Job{}).
 		Select("pipeline_id, COUNT(*) as total, "+
 			"SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, "+
-			"COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) * 1000), 0) as avg_ms").
+			"COALESCE(AVG("+durationMs("created_at", "updated_at")+"), 0) as avg_ms").
 		Where("created_at >= ?", since)
 	if tenantID > 0 {
 		jq = jq.Where("tenant_id = ?", tenantID)
@@ -188,7 +196,7 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 
 		var durations []float64
 		dq := s.db.Model(&model.Job{}).
-			Select("EXTRACT(EPOCH FROM (updated_at - created_at)) * 1000 as dur").
+			Select(durationMs("created_at", "updated_at")+" as dur").
 			Where("pipeline_id = ? AND created_at >= ? AND status IN ?", r.PipelineID, since, []string{"completed", "failed"})
 		if tenantID > 0 {
 			dq = dq.Where("tenant_id = ?", tenantID)
@@ -214,7 +222,7 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 		}
 		s.db.Model(&model.JobStepLog{}).
 			Select("processor_type, "+
-				"COALESCE(AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000), 0) as avg_ms, "+
+				"COALESCE(AVG("+durationMs("started_at", "finished_at")+"), 0) as avg_ms, "+
 				"COALESCE(AVG(tokens), 0) as avg_tokens, "+
 				"COALESCE(AVG(cost), 0) as avg_cost, "+
 				"COUNT(*) as total, "+
@@ -302,7 +310,7 @@ func (s *StatsService) GetLLMPerformance(days int, tenantID uint) (*LLMPerforman
 	var procRows []procRow
 	llmQ := s.db.Model(&model.JobStepLog{}).
 		Select("processor_type, COUNT(*) as total_calls, "+
-			"COALESCE(AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000), 0) as avg_ms, "+
+			"COALESCE(AVG("+durationMs("started_at", "finished_at")+"), 0) as avg_ms, "+
 			"COALESCE(SUM(tokens), 0) as total_tokens, "+
 			"COALESCE(SUM(cost), 0) as total_cost, "+
 			"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed").

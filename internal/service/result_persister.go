@@ -24,6 +24,8 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 			Data     pipeline.EntityData
 		}
 		var pendingReview []pendingEntity
+		var newEntities []model.Entity
+		newEntityIdx := make(map[int]pipeline.EntityData) // index in newEntities -> original data
 
 		for _, e := range pctx.Entities {
 			aliasesJSON, _ := json.Marshal(e.Aliases)
@@ -69,7 +71,8 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				entityNameToID[e.Name] = existingID
 			} else {
 				confirmed := e.Confidence >= autoConfirmThreshold
-				entity := model.Entity{
+				newEntityIdx[len(newEntities)] = e
+				newEntities = append(newEntities, model.Entity{
 					UUID:       uuid.New().String(),
 					Type:       e.Type,
 					Name:       e.Name,
@@ -80,17 +83,19 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 					SourceID:   sourceID,
 					Evidence:   evidenceJSON,
 					TenantID:   tenantID,
-				}
-				if err := tx.Create(&entity).Error; err != nil {
-					return err
-				}
-				entityNameToID[e.Name] = entity.ID
+				})
+			}
+		}
 
-				if !confirmed {
-					pendingReview = append(pendingReview, pendingEntity{
-						EntityID: entity.ID,
-						Data:     e,
-					})
+		if len(newEntities) > 0 {
+			if err := tx.CreateInBatches(&newEntities, 100).Error; err != nil {
+				return err
+			}
+			for i, ent := range newEntities {
+				data := newEntityIdx[i]
+				entityNameToID[data.Name] = ent.ID
+				if !ent.Confirmed {
+					pendingReview = append(pendingReview, pendingEntity{EntityID: ent.ID, Data: data})
 				}
 			}
 		}
@@ -119,6 +124,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 			}
 		}
 
+		var newRelations []model.Relation
 		for _, r := range pctx.Relations {
 			fromID, fromOK := entityNameToID[r.From]
 			toID, toOK := entityNameToID[r.To]
@@ -139,7 +145,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				continue
 			}
 
-			rel := model.Relation{
+			newRelations = append(newRelations, model.Relation{
 				UUID:         uuid.New().String(),
 				FromEntityID: fromID,
 				ToEntityID:   toID,
@@ -148,8 +154,11 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				Confidence:   r.Confidence,
 				SourceID:     sourceID,
 				TenantID:     tenantID,
-			}
-			if err := tx.Create(&rel).Error; err != nil {
+			})
+		}
+
+		if len(newRelations) > 0 {
+			if err := tx.CreateInBatches(&newRelations, 100).Error; err != nil {
 				return err
 			}
 		}
