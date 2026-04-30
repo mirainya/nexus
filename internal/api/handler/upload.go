@@ -21,6 +21,17 @@ func NewUploadHandler() *UploadHandler {
 	return &UploadHandler{}
 }
 
+// Upload godoc
+// @Summary 上传文件
+// @Description 上传文件到存储服务
+// @Tags 文件
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "文件"
+// @Param path formData string false "存储路径"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/upload [post]
 func (h *UploadHandler) Upload(c *gin.Context) {
 	cfg := config.C.XFileStorage
 	if cfg.BaseURL == "" || cfg.APIKey == "" {

@@ -20,7 +20,11 @@ func (p *ContextLoader) Process(_ context.Context, pctx *pipeline.ProcessorConte
 	}
 
 	var entities []model.Entity
-	pctx.DB.Limit(200).Find(&entities)
+	q := pctx.DB.Limit(200)
+	if pctx.TenantID > 0 {
+		q = q.Where("tenant_id = ?", pctx.TenantID)
+	}
+	q.Find(&entities)
 
 	var matched []map[string]any
 	for _, e := range entities {

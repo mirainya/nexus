@@ -35,6 +35,18 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Login godoc
+// @Summary 管理员登录
+// @Description 使用用户名密码登录，返回 JWT Token
+// @Tags 认证
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "登录请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Failure 401 {object} resp.Response
+// @Failure 429 {object} resp.Response
+// @Router /admin/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

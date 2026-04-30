@@ -23,6 +23,7 @@ type ProcessorContext struct {
 	LLM            *llm.Gateway           `json:"-"`
 	DB             *gorm.DB               `json:"-"`
 	VectorDB       vectordb.Client        `json:"-"`
+	TenantID       uint                   `json:"-"`
 }
 
 type LLMOverrideConfig struct {

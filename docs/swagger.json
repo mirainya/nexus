@@ -6,9 +6,2004 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "localhost:7847",
     "basePath": "/api",
     "paths": {
+        "/admin/api-keys": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有 API Key",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API Key"
+                ],
+                "summary": "获取 API Key 列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的 API Key，用于外部接口认证",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API Key"
+                ],
+                "summary": "创建 API Key",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.APIKeyCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/api-keys/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新 API Key 的名称、状态等信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API Key"
+                ],
+                "summary": "更新 API Key",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "API Key ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.APIKeyUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定 API Key",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API Key"
+                ],
+                "summary": "删除 API Key",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "API Key ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/api-keys/{id}/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查询指定 API Key 的使用统计",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API Key"
+                ],
+                "summary": "查询 API Key 用量",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "API Key ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "统计天数",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/auth/login": {
+            "post": {
+                "description": "使用用户名密码登录，返回 JWT Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "管理员登录",
+                "parameters": [
+                    {
+                        "description": "登录请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取凭证列表，可按 API Key 过滤",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "凭证"
+                ],
+                "summary": "获取凭证列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "API Key ID",
+                        "name": "api_key_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建 LLM 凭证，绑定到 API Key，用于外部用户自带模型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "凭证"
+                ],
+                "summary": "创建凭证",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CredentialCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/credentials/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新凭证信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "凭证"
+                ],
+                "summary": "更新凭证",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "凭证 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CredentialUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定凭证",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "凭证"
+                ],
+                "summary": "删除凭证",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "凭证 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/entities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取实体，支持按类型和关键词筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "实体"
+                ],
+                "summary": "获取实体列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "实体类型",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索关键词",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/entities/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定实体",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "实体"
+                ],
+                "summary": "获取实体详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "实体 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/entities/{id}/relations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定实体的所有关系",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "实体"
+                ],
+                "summary": "获取实体关系",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "实体 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/graph": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取实体关系图谱数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "图谱"
+                ],
+                "summary": "获取知识图谱",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 200,
+                        "description": "节点数量限制",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/jobs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取任务列表，支持按状态筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "任务"
+                ],
+                "summary": "获取任务列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态筛选",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/jobs/recommend": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据场景推荐相关任务",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "任务"
+                ],
+                "summary": "推荐任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "场景名称",
+                        "name": "scene",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/jobs/{id}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "重试失败的任务",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "任务"
+                ],
+                "summary": "重试任务",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "任务 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/llm-providers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有已配置的 LLM 提供商",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "获取 LLM Provider 列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "添加新的 LLM 提供商配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "创建 LLM Provider",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.LLMProviderCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/llm-providers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新 LLM 提供商配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "更新 LLM Provider",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Provider ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.LLMProviderUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定 LLM 提供商",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "删除 LLM Provider",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Provider ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/llm-providers/{id}/default": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将指定 Provider 设为默认",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "设置默认 Provider",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Provider ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/llm-providers/{name}/models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定 Provider 支持的模型",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM Provider"
+                ],
+                "summary": "获取 Provider 模型列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Provider 名称",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pipelines": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有 Pipeline",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "获取 Pipeline 列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的处理流水线",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "创建 Pipeline",
+                "parameters": [
+                    {
+                        "description": "Pipeline 配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Pipeline"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pipelines/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定 Pipeline 及其步骤",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "获取 Pipeline 详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新 Pipeline 配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "更新 Pipeline",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pipeline 配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Pipeline"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定 Pipeline",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "删除 Pipeline",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pipelines/{id}/steps": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "为指定 Pipeline 添加处理步骤",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "创建 Pipeline 步骤",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "步骤配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PipelineStep"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pipelines/{id}/steps/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "调整步骤执行顺序",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "重排 Pipeline 步骤",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "步骤 ID 列表 {step_ids: [1,2,3]}",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/pipelines/{id}/steps/{step_id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新指定步骤配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "更新 Pipeline 步骤",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "步骤 ID",
+                        "name": "step_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "步骤配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PipelineStep"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定步骤",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Pipeline"
+                ],
+                "summary": "删除 Pipeline 步骤",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pipeline ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "步骤 ID",
+                        "name": "step_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/prompts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有提示词模板",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "提示词"
+                ],
+                "summary": "获取提示词模板列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新的提示词模板",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "提示词"
+                ],
+                "summary": "创建提示词模板",
+                "parameters": [
+                    {
+                        "description": "模板内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PromptTemplate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/prompts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定提示词模板",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "提示词"
+                ],
+                "summary": "获取提示词模板详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模板 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新指定提示词模板",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "提示词"
+                ],
+                "summary": "更新提示词模板",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模板 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "模板内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PromptTemplate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定提示词模板",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "提示词"
+                ],
+                "summary": "删除提示词模板",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模板 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取审核记录，支持按状态筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "审核"
+                ],
+                "summary": "获取审核列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态筛选",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews/{id}/approve": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "通过指定审核记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "审核"
+                ],
+                "summary": "通过审核",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "审核 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews/{id}/modify": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "修改审核记录的提取结果",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "审核"
+                ],
+                "summary": "修改审核内容",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "审核 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "修改内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews/{id}/reject": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "拒绝指定审核记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "审核"
+                ],
+                "summary": "拒绝审核",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "审核 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取总览统计数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "仪表盘统计",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats/errors": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取错误统计和分析数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "错误分析",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 7,
+                        "description": "统计天数",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats/llm-performance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取 LLM 调用性能数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "LLM 性能统计",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 7,
+                        "description": "统计天数",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats/pipeline-performance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取 Pipeline 处理性能数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "Pipeline 性能统计",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 7,
+                        "description": "统计天数",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tenants": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有租户",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "租户"
+                ],
+                "summary": "获取租户列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建新租户",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "租户"
+                ],
+                "summary": "创建租户",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.TenantCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tenants/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新租户名称、状态、配额等",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "租户"
+                ],
+                "summary": "更新租户",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "租户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.TenantUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除指定租户",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "租户"
+                ],
+                "summary": "删除租户",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "租户 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "上传文件到存储服务",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件"
+                ],
+                "summary": "上传文件",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "存储路径",
+                        "name": "path",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/webhooks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取 Webhook 投递日志",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "获取 Webhook 日志",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/jobs": {
             "post": {
                 "security": [
@@ -204,6 +2199,30 @@
         }
     },
     "definitions": {
+        "handler.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Pipeline": {
+            "type": "object"
+        },
+        "model.PipelineStep": {
+            "type": "object"
+        },
+        "model.PromptTemplate": {
+            "type": "object"
+        },
         "resp.Response": {
             "type": "object",
             "properties": {
@@ -212,6 +2231,111 @@
                 },
                 "data": {},
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.APIKeyCreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "daily_limit": {
+                    "type": "integer"
+                },
+                "daily_tokens": {
+                    "type": "integer"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "monthly_limit": {
+                    "type": "integer"
+                },
+                "monthly_tokens": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.APIKeyUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "daily_limit": {
+                    "type": "integer"
+                },
+                "daily_tokens": {
+                    "type": "integer"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "monthly_limit": {
+                    "type": "integer"
+                },
+                "monthly_tokens": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CredentialCreateRequest": {
+            "type": "object",
+            "required": [
+                "api_key",
+                "api_key_id",
+                "base_url",
+                "name",
+                "provider_type"
+            ],
+            "properties": {
+                "api_key": {
+                    "type": "string"
+                },
+                "api_key_id": {
+                    "type": "integer"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "default_model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CredentialUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "default_model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider_type": {
                     "type": "string"
                 }
             }
@@ -247,6 +2371,74 @@
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "service.LLMProviderCreateRequest": {
+            "type": "object",
+            "required": [
+                "api_key",
+                "name"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "default_model": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "input_price": {
+                    "type": "number"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "max_concurrency": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "output_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "service.LLMProviderUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "default_model": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "input_price": {
+                    "type": "number"
+                },
+                "max_concurrency": {
+                    "type": "integer"
+                },
+                "output_price": {
+                    "type": "number"
                 }
             }
         },
@@ -293,12 +2485,45 @@
                     "type": "string"
                 }
             }
+        },
+        "service.TenantCreateRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.TenantUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "monthly_request_limit": {
+                    "type": "integer"
+                },
+                "monthly_token_limit": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {
         "ApiKeyAuth": {
             "type": "apiKey",
             "name": "X-API-Key",
+            "in": "header"
+        },
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
             "in": "header"
         }
     }

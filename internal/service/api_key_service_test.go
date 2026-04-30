@@ -69,7 +69,7 @@ func TestAPIKeyService_List(t *testing.T) {
 	svc.Create(APIKeyCreateRequest{Name: "list-key-1"})
 	svc.Create(APIKeyCreateRequest{Name: "list-key-2"})
 
-	list, err := svc.List()
+	list, err := svc.List(0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestAPIKeyService_Delete(t *testing.T) {
 		t.Fatalf("delete: %v", err)
 	}
 
-	list, _ := svc.List()
+	list, _ := svc.List(0)
 	for _, k := range list {
 		if k.ID == created.ID {
 			t.Error("expected key to be deleted")

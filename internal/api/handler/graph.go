@@ -17,6 +17,15 @@ func NewGraphHandler(svc *service.GraphService) *GraphHandler {
 	return &GraphHandler{svc: svc}
 }
 
+// GetGraph godoc
+// @Summary 获取知识图谱
+// @Description 获取实体关系图谱数据
+// @Tags 图谱
+// @Produce json
+// @Param limit query int false "节点数量限制" default(200)
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/graph [get]
 func (h *GraphHandler) GetGraph(c *gin.Context) {
 	limit := 200
 	if v := c.Query("limit"); v != "" {

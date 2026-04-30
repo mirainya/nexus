@@ -14,24 +14,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name);
 CREATE INDEX IF NOT EXISTS idx_tenants_deleted_at ON tenants(deleted_at);
 
 -- Default tenant for existing data
-INSERT INTO tenants (uuid, name, active) VALUES ('00000000-0000-0000-0000-000000000000', 'default', true);
+INSERT INTO tenants (uuid, name, active) VALUES ('00000000-0000-0000-0000-000000000000', 'default', true)
+    ON CONFLICT (uuid) DO NOTHING;
 
--- Add tenant_id to existing tables
-ALTER TABLE api_keys ADD COLUMN tenant_id BIGINT REFERENCES tenants(id);
-ALTER TABLE users ADD COLUMN tenant_id BIGINT REFERENCES tenants(id);
-ALTER TABLE documents ADD COLUMN tenant_id BIGINT;
-ALTER TABLE jobs ADD COLUMN tenant_id BIGINT;
-ALTER TABLE entities ADD COLUMN tenant_id BIGINT;
-ALTER TABLE relations ADD COLUMN tenant_id BIGINT;
-ALTER TABLE reviews ADD COLUMN tenant_id BIGINT;
+-- Add tenant_id to existing tables (IF NOT EXISTS for idempotency)
+ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS tenant_id BIGINT REFERENCES tenants(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id BIGINT REFERENCES tenants(id);
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
+ALTER TABLE entities ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
+ALTER TABLE relations ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
 
 -- Migrate existing data to default tenant
-UPDATE api_keys SET tenant_id = 1 WHERE tenant_id IS NULL;
-UPDATE documents SET tenant_id = 1 WHERE tenant_id IS NULL;
-UPDATE jobs SET tenant_id = 1 WHERE tenant_id IS NULL;
-UPDATE entities SET tenant_id = 1 WHERE tenant_id IS NULL;
-UPDATE relations SET tenant_id = 1 WHERE tenant_id IS NULL;
-UPDATE reviews SET tenant_id = 1 WHERE tenant_id IS NULL;
+UPDATE api_keys SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
+UPDATE documents SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
+UPDATE jobs SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
+UPDATE entities SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
+UPDATE relations SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
+UPDATE reviews SET tenant_id = (SELECT id FROM tenants WHERE uuid = '00000000-0000-0000-0000-000000000000') WHERE tenant_id IS NULL;
 
 -- Set NOT NULL constraints
 ALTER TABLE api_keys ALTER COLUMN tenant_id SET NOT NULL;

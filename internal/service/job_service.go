@@ -194,8 +194,9 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 			SourceURL: doc.SourceURL,
 			Metadata:  meta,
 		},
-		LLM: s.gw,
-		DB:  s.db,
+		LLM:      s.gw,
+		DB:       s.db,
+		TenantID: job.TenantID,
 	}
 
 	if vectordb.Available() {

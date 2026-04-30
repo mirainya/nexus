@@ -1,11 +1,97 @@
 basePath: /api
 definitions:
+  handler.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  model.Pipeline:
+    type: object
+  model.PipelineStep:
+    type: object
+  model.PromptTemplate:
+    type: object
   resp.Response:
     properties:
       code:
         type: integer
       data: {}
       message:
+        type: string
+    type: object
+  service.APIKeyCreateRequest:
+    properties:
+      daily_limit:
+        type: integer
+      daily_tokens:
+        type: integer
+      expires_at:
+        type: string
+      monthly_limit:
+        type: integer
+      monthly_tokens:
+        type: integer
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  service.APIKeyUpdateRequest:
+    properties:
+      active:
+        type: boolean
+      daily_limit:
+        type: integer
+      daily_tokens:
+        type: integer
+      expires_at:
+        type: string
+      monthly_limit:
+        type: integer
+      monthly_tokens:
+        type: integer
+      name:
+        type: string
+    type: object
+  service.CredentialCreateRequest:
+    properties:
+      api_key:
+        type: string
+      api_key_id:
+        type: integer
+      base_url:
+        type: string
+      default_model:
+        type: string
+      name:
+        type: string
+      provider_type:
+        type: string
+    required:
+    - api_key
+    - api_key_id
+    - base_url
+    - name
+    - provider_type
+    type: object
+  service.CredentialUpdateRequest:
+    properties:
+      active:
+        type: boolean
+      api_key:
+        type: string
+      base_url:
+        type: string
+      default_model:
+        type: string
+      name:
+        type: string
+      provider_type:
         type: string
     type: object
   service.JobSubmitRequest:
@@ -30,6 +116,51 @@ definitions:
     required:
     - pipeline_id
     - type
+    type: object
+  service.LLMProviderCreateRequest:
+    properties:
+      active:
+        type: boolean
+      api_key:
+        type: string
+      base_url:
+        type: string
+      default_model:
+        type: string
+      display_name:
+        type: string
+      input_price:
+        type: number
+      is_default:
+        type: boolean
+      max_concurrency:
+        type: integer
+      name:
+        type: string
+      output_price:
+        type: number
+    required:
+    - api_key
+    - name
+    type: object
+  service.LLMProviderUpdateRequest:
+    properties:
+      active:
+        type: boolean
+      api_key:
+        type: string
+      base_url:
+        type: string
+      default_model:
+        type: string
+      display_name:
+        type: string
+      input_price:
+        type: number
+      max_concurrency:
+        type: integer
+      output_price:
+        type: number
     type: object
   service.ParseRequest:
     properties:
@@ -60,13 +191,1282 @@ definitions:
     required:
     - query
     type: object
-host: localhost:8080
+  service.TenantCreateRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  service.TenantUpdateRequest:
+    properties:
+      active:
+        type: boolean
+      monthly_request_limit:
+        type: integer
+      monthly_token_limit:
+        type: integer
+      name:
+        type: string
+    type: object
+host: localhost:7847
 info:
   contact: {}
   description: LLM 文档处理与知识图谱 API 中间件
   title: Nexus API
   version: "1.0"
 paths:
+  /admin/api-keys:
+    get:
+      description: 获取所有 API Key
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 API Key 列表
+      tags:
+      - API Key
+    post:
+      consumes:
+      - application/json
+      description: 创建新的 API Key，用于外部接口认证
+      parameters:
+      - description: 创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.APIKeyCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建 API Key
+      tags:
+      - API Key
+  /admin/api-keys/{id}:
+    delete:
+      description: 删除指定 API Key
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除 API Key
+      tags:
+      - API Key
+    put:
+      consumes:
+      - application/json
+      description: 更新 API Key 的名称、状态等信息
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.APIKeyUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新 API Key
+      tags:
+      - API Key
+  /admin/api-keys/{id}/usage:
+    get:
+      description: 查询指定 API Key 的使用统计
+      parameters:
+      - description: API Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 30
+        description: 统计天数
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询 API Key 用量
+      tags:
+      - API Key
+  /admin/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用用户名密码登录，返回 JWT Token
+      parameters:
+      - description: 登录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/resp.Response'
+      summary: 管理员登录
+      tags:
+      - 认证
+  /admin/credentials:
+    get:
+      description: 获取凭证列表，可按 API Key 过滤
+      parameters:
+      - description: API Key ID
+        in: query
+        name: api_key_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取凭证列表
+      tags:
+      - 凭证
+    post:
+      consumes:
+      - application/json
+      description: 创建 LLM 凭证，绑定到 API Key，用于外部用户自带模型
+      parameters:
+      - description: 创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CredentialCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建凭证
+      tags:
+      - 凭证
+  /admin/credentials/{id}:
+    delete:
+      description: 删除指定凭证
+      parameters:
+      - description: 凭证 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除凭证
+      tags:
+      - 凭证
+    put:
+      consumes:
+      - application/json
+      description: 更新凭证信息
+      parameters:
+      - description: 凭证 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CredentialUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新凭证
+      tags:
+      - 凭证
+  /admin/entities:
+    get:
+      description: 分页获取实体，支持按类型和关键词筛选
+      parameters:
+      - description: 实体类型
+        in: query
+        name: type
+        type: string
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取实体列表
+      tags:
+      - 实体
+  /admin/entities/{id}:
+    get:
+      description: 获取指定实体
+      parameters:
+      - description: 实体 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取实体详情
+      tags:
+      - 实体
+  /admin/entities/{id}/relations:
+    get:
+      description: 获取指定实体的所有关系
+      parameters:
+      - description: 实体 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取实体关系
+      tags:
+      - 实体
+  /admin/graph:
+    get:
+      description: 获取实体关系图谱数据
+      parameters:
+      - default: 200
+        description: 节点数量限制
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取知识图谱
+      tags:
+      - 图谱
+  /admin/jobs:
+    get:
+      description: 分页获取任务列表，支持按状态筛选
+      parameters:
+      - description: 状态筛选
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取任务列表
+      tags:
+      - 任务
+  /admin/jobs/{id}/retry:
+    post:
+      description: 重试失败的任务
+      parameters:
+      - description: 任务 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 重试任务
+      tags:
+      - 任务
+  /admin/jobs/recommend:
+    get:
+      description: 根据场景推荐相关任务
+      parameters:
+      - description: 场景名称
+        in: query
+        name: scene
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 推荐任务
+      tags:
+      - 任务
+  /admin/llm-providers:
+    get:
+      description: 获取所有已配置的 LLM 提供商
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 LLM Provider 列表
+      tags:
+      - LLM Provider
+    post:
+      consumes:
+      - application/json
+      description: 添加新的 LLM 提供商配置
+      parameters:
+      - description: 创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.LLMProviderCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建 LLM Provider
+      tags:
+      - LLM Provider
+  /admin/llm-providers/{id}:
+    delete:
+      description: 删除指定 LLM 提供商
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除 LLM Provider
+      tags:
+      - LLM Provider
+    put:
+      consumes:
+      - application/json
+      description: 更新 LLM 提供商配置
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.LLMProviderUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新 LLM Provider
+      tags:
+      - LLM Provider
+  /admin/llm-providers/{id}/default:
+    put:
+      description: 将指定 Provider 设为默认
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置默认 Provider
+      tags:
+      - LLM Provider
+  /admin/llm-providers/{name}/models:
+    get:
+      description: 获取指定 Provider 支持的模型
+      parameters:
+      - description: Provider 名称
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 Provider 模型列表
+      tags:
+      - LLM Provider
+  /admin/pipelines:
+    get:
+      description: 获取所有 Pipeline
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 Pipeline 列表
+      tags:
+      - Pipeline
+    post:
+      consumes:
+      - application/json
+      description: 创建新的处理流水线
+      parameters:
+      - description: Pipeline 配置
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.Pipeline'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建 Pipeline
+      tags:
+      - Pipeline
+  /admin/pipelines/{id}:
+    delete:
+      description: 删除指定 Pipeline
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除 Pipeline
+      tags:
+      - Pipeline
+    get:
+      description: 获取指定 Pipeline 及其步骤
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 Pipeline 详情
+      tags:
+      - Pipeline
+    put:
+      consumes:
+      - application/json
+      description: 更新 Pipeline 配置
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pipeline 配置
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.Pipeline'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新 Pipeline
+      tags:
+      - Pipeline
+  /admin/pipelines/{id}/steps:
+    post:
+      consumes:
+      - application/json
+      description: 为指定 Pipeline 添加处理步骤
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 步骤配置
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PipelineStep'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建 Pipeline 步骤
+      tags:
+      - Pipeline
+  /admin/pipelines/{id}/steps/{step_id}:
+    delete:
+      description: 删除指定步骤
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 步骤 ID
+        in: path
+        name: step_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除 Pipeline 步骤
+      tags:
+      - Pipeline
+    put:
+      consumes:
+      - application/json
+      description: 更新指定步骤配置
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 步骤 ID
+        in: path
+        name: step_id
+        required: true
+        type: integer
+      - description: 步骤配置
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PipelineStep'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新 Pipeline 步骤
+      tags:
+      - Pipeline
+  /admin/pipelines/{id}/steps/reorder:
+    put:
+      consumes:
+      - application/json
+      description: 调整步骤执行顺序
+      parameters:
+      - description: Pipeline ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: '步骤 ID 列表 {step_ids: [1,2,3]}'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 重排 Pipeline 步骤
+      tags:
+      - Pipeline
+  /admin/prompts:
+    get:
+      description: 获取所有提示词模板
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取提示词模板列表
+      tags:
+      - 提示词
+    post:
+      consumes:
+      - application/json
+      description: 创建新的提示词模板
+      parameters:
+      - description: 模板内容
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PromptTemplate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建提示词模板
+      tags:
+      - 提示词
+  /admin/prompts/{id}:
+    delete:
+      description: 删除指定提示词模板
+      parameters:
+      - description: 模板 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除提示词模板
+      tags:
+      - 提示词
+    get:
+      description: 获取指定提示词模板
+      parameters:
+      - description: 模板 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取提示词模板详情
+      tags:
+      - 提示词
+    put:
+      consumes:
+      - application/json
+      description: 更新指定提示词模板
+      parameters:
+      - description: 模板 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 模板内容
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PromptTemplate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新提示词模板
+      tags:
+      - 提示词
+  /admin/reviews:
+    get:
+      description: 分页获取审核记录，支持按状态筛选
+      parameters:
+      - description: 状态筛选
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取审核列表
+      tags:
+      - 审核
+  /admin/reviews/{id}/approve:
+    put:
+      description: 通过指定审核记录
+      parameters:
+      - description: 审核 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 通过审核
+      tags:
+      - 审核
+  /admin/reviews/{id}/modify:
+    put:
+      consumes:
+      - application/json
+      description: 修改审核记录的提取结果
+      parameters:
+      - description: 审核 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 修改内容
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改审核内容
+      tags:
+      - 审核
+  /admin/reviews/{id}/reject:
+    put:
+      description: 拒绝指定审核记录
+      parameters:
+      - description: 审核 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 拒绝审核
+      tags:
+      - 审核
+  /admin/stats:
+    get:
+      description: 获取总览统计数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 仪表盘统计
+      tags:
+      - 统计
+  /admin/stats/errors:
+    get:
+      description: 获取错误统计和分析数据
+      parameters:
+      - default: 7
+        description: 统计天数
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 错误分析
+      tags:
+      - 统计
+  /admin/stats/llm-performance:
+    get:
+      description: 获取 LLM 调用性能数据
+      parameters:
+      - default: 7
+        description: 统计天数
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: LLM 性能统计
+      tags:
+      - 统计
+  /admin/stats/pipeline-performance:
+    get:
+      description: 获取 Pipeline 处理性能数据
+      parameters:
+      - default: 7
+        description: 统计天数
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: Pipeline 性能统计
+      tags:
+      - 统计
+  /admin/tenants:
+    get:
+      description: 获取所有租户
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取租户列表
+      tags:
+      - 租户
+    post:
+      consumes:
+      - application/json
+      description: 创建新租户
+      parameters:
+      - description: 创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.TenantCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建租户
+      tags:
+      - 租户
+  /admin/tenants/{id}:
+    delete:
+      description: 删除指定租户
+      parameters:
+      - description: 租户 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除租户
+      tags:
+      - 租户
+    put:
+      consumes:
+      - application/json
+      description: 更新租户名称、状态、配额等
+      parameters:
+      - description: 租户 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.TenantUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新租户
+      tags:
+      - 租户
+  /admin/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传文件到存储服务
+      parameters:
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 存储路径
+        in: formData
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 上传文件
+      tags:
+      - 文件
+  /admin/webhooks:
+    get:
+      description: 分页获取 Webhook 投递日志
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取 Webhook 日志
+      tags:
+      - Webhook
   /v1/jobs:
     post:
       consumes:
@@ -192,5 +1592,9 @@ securityDefinitions:
   ApiKeyAuth:
     in: header
     name: X-API-Key
+    type: apiKey
+  BearerAuth:
+    in: header
+    name: Authorization
     type: apiKey
 swagger: "2.0"

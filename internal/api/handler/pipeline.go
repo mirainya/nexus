@@ -16,6 +16,17 @@ func NewPipelineHandler(svc *service.PipelineService) *PipelineHandler {
 	return &PipelineHandler{svc: svc}
 }
 
+// Create godoc
+// @Summary 创建 Pipeline
+// @Description 创建新的处理流水线
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// @Param request body model.Pipeline true "Pipeline 配置"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines [post]
 func (h *PipelineHandler) Create(c *gin.Context) {
 	var p model.Pipeline
 	if err := c.ShouldBindJSON(&p); err != nil {
@@ -29,6 +40,16 @@ func (h *PipelineHandler) Create(c *gin.Context) {
 	resp.Success(c, p)
 }
 
+// Get godoc
+// @Summary 获取 Pipeline 详情
+// @Description 获取指定 Pipeline 及其步骤
+// @Tags Pipeline
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Success 200 {object} resp.Response
+// @Failure 404 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id} [get]
 func (h *PipelineHandler) Get(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -42,6 +63,14 @@ func (h *PipelineHandler) Get(c *gin.Context) {
 	resp.Success(c, p)
 }
 
+// List godoc
+// @Summary 获取 Pipeline 列表
+// @Description 获取所有 Pipeline
+// @Tags Pipeline
+// @Produce json
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines [get]
 func (h *PipelineHandler) List(c *gin.Context) {
 	list, err := h.svc.List()
 	if err != nil {
@@ -51,6 +80,18 @@ func (h *PipelineHandler) List(c *gin.Context) {
 	resp.Success(c, list)
 }
 
+// Update godoc
+// @Summary 更新 Pipeline
+// @Description 更新 Pipeline 配置
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Param request body model.Pipeline true "Pipeline 配置"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id} [put]
 func (h *PipelineHandler) Update(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -69,6 +110,15 @@ func (h *PipelineHandler) Update(c *gin.Context) {
 	resp.Success(c, p)
 }
 
+// Delete godoc
+// @Summary 删除 Pipeline
+// @Description 删除指定 Pipeline
+// @Tags Pipeline
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id} [delete]
 func (h *PipelineHandler) Delete(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -81,6 +131,18 @@ func (h *PipelineHandler) Delete(c *gin.Context) {
 	resp.Success(c, nil)
 }
 
+// CreateStep godoc
+// @Summary 创建 Pipeline 步骤
+// @Description 为指定 Pipeline 添加处理步骤
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Param request body model.PipelineStep true "步骤配置"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id}/steps [post]
 func (h *PipelineHandler) CreateStep(c *gin.Context) {
 	pipelineID, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -99,6 +161,19 @@ func (h *PipelineHandler) CreateStep(c *gin.Context) {
 	resp.Success(c, step)
 }
 
+// UpdateStep godoc
+// @Summary 更新 Pipeline 步骤
+// @Description 更新指定步骤配置
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Param step_id path int true "步骤 ID"
+// @Param request body model.PipelineStep true "步骤配置"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id}/steps/{step_id} [put]
 func (h *PipelineHandler) UpdateStep(c *gin.Context) {
 	_, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -121,6 +196,16 @@ func (h *PipelineHandler) UpdateStep(c *gin.Context) {
 	resp.Success(c, step)
 }
 
+// DeleteStep godoc
+// @Summary 删除 Pipeline 步骤
+// @Description 删除指定步骤
+// @Tags Pipeline
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Param step_id path int true "步骤 ID"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id}/steps/{step_id} [delete]
 func (h *PipelineHandler) DeleteStep(c *gin.Context) {
 	stepID, err := resp.ParseUintParam(c, "step_id")
 	if err != nil {
@@ -133,6 +218,17 @@ func (h *PipelineHandler) DeleteStep(c *gin.Context) {
 	resp.Success(c, nil)
 }
 
+// ReorderSteps godoc
+// @Summary 重排 Pipeline 步骤
+// @Description 调整步骤执行顺序
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// @Param id path int true "Pipeline ID"
+// @Param request body object true "步骤 ID 列表 {step_ids: [1,2,3]}"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/pipelines/{id}/steps/reorder [put]
 func (h *PipelineHandler) ReorderSteps(c *gin.Context) {
 	pipelineID, err := resp.ParseUintParam(c, "id")
 	if err != nil {

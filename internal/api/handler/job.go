@@ -81,6 +81,16 @@ func (h *JobHandler) GetStatus(c *gin.Context) {
 	resp.Success(c, job)
 }
 
+// Recommend godoc
+// @Summary 推荐任务
+// @Description 根据场景推荐相关任务
+// @Tags 任务
+// @Produce json
+// @Param scene query string true "场景名称"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/jobs/recommend [get]
 func (h *JobHandler) Recommend(c *gin.Context) {
 	scene := c.Query("scene")
 	if scene == "" {
@@ -95,6 +105,16 @@ func (h *JobHandler) Recommend(c *gin.Context) {
 	resp.Success(c, items)
 }
 
+// Retry godoc
+// @Summary 重试任务
+// @Description 重试失败的任务
+// @Tags 任务
+// @Produce json
+// @Param id path int true "任务 ID"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/jobs/{id}/retry [post]
 func (h *JobHandler) Retry(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -108,6 +128,17 @@ func (h *JobHandler) Retry(c *gin.Context) {
 	resp.Success(c, gin.H{"job_id": job.UUID, "status": job.Status})
 }
 
+// List godoc
+// @Summary 获取任务列表
+// @Description 分页获取任务列表，支持按状态筛选
+// @Tags 任务
+// @Produce json
+// @Param status query string false "状态筛选"
+// @Param page query int false "页码" default(1)
+// @Param page_size query int false "每页数量" default(20)
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/jobs [get]
 func (h *JobHandler) List(c *gin.Context) {
 	page, pageSize := parsePagination(c)
 	status := c.Query("status")

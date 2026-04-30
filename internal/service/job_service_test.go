@@ -255,6 +255,7 @@ func TestResultPersister_PersistResults(t *testing.T) {
 		Entities: []pipeline.EntityData{
 			{Type: "person", Name: "Alice", Confidence: 0.95},
 			{Type: "person", Name: "Bob", Confidence: 0.90},
+			{Type: "person", Name: "Charlie", Confidence: 0.5},
 		},
 		Relations: []pipeline.RelationData{
 			{From: "Alice", To: "Bob", Type: "knows", Confidence: 0.85},
@@ -268,8 +269,18 @@ func TestResultPersister_PersistResults(t *testing.T) {
 
 	var entities []model.Entity
 	testDB.Where("source_id = ?", doc.ID).Find(&entities)
-	if len(entities) != 2 {
-		t.Fatalf("expected 2 entities, got %d", len(entities))
+	if len(entities) != 3 {
+		t.Fatalf("expected 3 entities, got %d", len(entities))
+	}
+
+	confirmedCount := 0
+	for _, e := range entities {
+		if e.Confirmed {
+			confirmedCount++
+		}
+	}
+	if confirmedCount != 2 {
+		t.Errorf("expected 2 auto-confirmed entities, got %d", confirmedCount)
 	}
 
 	var relations []model.Relation
@@ -282,9 +293,9 @@ func TestResultPersister_PersistResults(t *testing.T) {
 	}
 
 	var reviews []model.Review
-	testDB.Where("entity_id IN ?", []uint{entities[0].ID, entities[1].ID}).Find(&reviews)
-	if len(reviews) != 2 {
-		t.Errorf("expected 2 reviews, got %d", len(reviews))
+	testDB.Where("document_id = ?", doc.ID).Find(&reviews)
+	if len(reviews) != 1 {
+		t.Errorf("expected 1 document-level review, got %d", len(reviews))
 	}
 }
 

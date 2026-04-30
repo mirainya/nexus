@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const autoConfirmThreshold = 0.8
+
 type ResultPersister struct{ db *gorm.DB }
 
 func NewResultPersister(db *gorm.DB) *ResultPersister { return &ResultPersister{db: db} }
@@ -16,6 +18,12 @@ func NewResultPersister(db *gorm.DB) *ResultPersister { return &ResultPersister{
 func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint, tenantID uint) error {
 	return p.db.Transaction(func(tx *gorm.DB) error {
 		entityNameToID := make(map[string]uint)
+
+		type pendingEntity struct {
+			EntityID uint
+			Data     pipeline.EntityData
+		}
+		var pendingReview []pendingEntity
 
 		for _, e := range pctx.Entities {
 			aliasesJSON, _ := json.Marshal(e.Aliases)
@@ -60,6 +68,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				}
 				entityNameToID[e.Name] = existingID
 			} else {
+				confirmed := e.Confidence >= autoConfirmThreshold
 				entity := model.Entity{
 					UUID:       uuid.New().String(),
 					Type:       e.Type,
@@ -67,6 +76,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 					Aliases:    aliasesJSON,
 					Attributes: attrsJSON,
 					Confidence: e.Confidence,
+					Confirmed:  confirmed,
 					SourceID:   sourceID,
 					Evidence:   evidenceJSON,
 					TenantID:   tenantID,
@@ -76,16 +86,36 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				}
 				entityNameToID[e.Name] = entity.ID
 
-				originalJSON, _ := json.Marshal(e)
-				review := model.Review{
-					EntityID:     &entity.ID,
-					Status:       "pending",
-					OriginalData: originalJSON,
-					TenantID:     tenantID,
+				if !confirmed {
+					pendingReview = append(pendingReview, pendingEntity{
+						EntityID: entity.ID,
+						Data:     e,
+					})
 				}
-				if err := tx.Create(&review).Error; err != nil {
-					return err
+			}
+		}
+
+		if len(pendingReview) > 0 {
+			reviewData := make([]map[string]any, len(pendingReview))
+			for i, pr := range pendingReview {
+				reviewData[i] = map[string]any{
+					"entity_id":  pr.EntityID,
+					"type":       pr.Data.Type,
+					"name":       pr.Data.Name,
+					"confidence": pr.Data.Confidence,
+					"attributes": pr.Data.Attributes,
+					"aliases":    pr.Data.Aliases,
 				}
+			}
+			originalJSON, _ := json.Marshal(reviewData)
+			review := model.Review{
+				DocumentID:   &sourceID,
+				Status:       "pending",
+				OriginalData: originalJSON,
+				TenantID:     tenantID,
+			}
+			if err := tx.Create(&review).Error; err != nil {
+				return err
 			}
 		}
 

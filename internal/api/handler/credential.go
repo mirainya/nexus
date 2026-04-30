@@ -17,6 +17,17 @@ func NewCredentialHandler(svc *service.CredentialService) *CredentialHandler {
 	return &CredentialHandler{svc: svc}
 }
 
+// Create godoc
+// @Summary 创建凭证
+// @Description 创建 LLM 凭证，绑定到 API Key，用于外部用户自带模型
+// @Tags 凭证
+// @Accept json
+// @Produce json
+// @Param request body service.CredentialCreateRequest true "创建请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/credentials [post]
 func (h *CredentialHandler) Create(c *gin.Context) {
 	var req service.CredentialCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -31,6 +42,15 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 	resp.Success(c, cred)
 }
 
+// List godoc
+// @Summary 获取凭证列表
+// @Description 获取凭证列表，可按 API Key 过滤
+// @Tags 凭证
+// @Produce json
+// @Param api_key_id query int false "API Key ID"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/credentials [get]
 func (h *CredentialHandler) List(c *gin.Context) {
 	var apiKeyID uint
 	if v := c.Query("api_key_id"); v != "" {
@@ -46,6 +66,18 @@ func (h *CredentialHandler) List(c *gin.Context) {
 	resp.Success(c, list)
 }
 
+// Update godoc
+// @Summary 更新凭证
+// @Description 更新凭证信息
+// @Tags 凭证
+// @Accept json
+// @Produce json
+// @Param id path int true "凭证 ID"
+// @Param request body service.CredentialUpdateRequest true "更新请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/credentials/{id} [put]
 func (h *CredentialHandler) Update(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
@@ -64,6 +96,15 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 	resp.Success(c, cred)
 }
 
+// Delete godoc
+// @Summary 删除凭证
+// @Description 删除指定凭证
+// @Tags 凭证
+// @Produce json
+// @Param id path int true "凭证 ID"
+// @Success 200 {object} resp.Response
+// @Security BearerAuth
+// @Router /admin/credentials/{id} [delete]
 func (h *CredentialHandler) Delete(c *gin.Context) {
 	id, err := resp.ParseUintParam(c, "id")
 	if err != nil {
