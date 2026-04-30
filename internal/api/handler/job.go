@@ -16,6 +16,18 @@ func NewJobHandler(svc *service.JobService, recommendSvc *service.RecommendServi
 	return &JobHandler{svc: svc, recommendSvc: recommendSvc}
 }
 
+// Submit godoc
+// @Summary 提交处理任务
+// @Description 提交文档到 Pipeline 进行异步处理，返回任务 ID
+// @Tags 任务
+// @Accept json
+// @Produce json
+// @Param request body service.JobSubmitRequest true "任务提交请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Failure 500 {object} resp.Response
+// @Security ApiKeyAuth
+// @Router /v1/jobs [post]
 func (h *JobHandler) Submit(c *gin.Context) {
 	var req service.JobSubmitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,6 +61,16 @@ func (h *JobHandler) Submit(c *gin.Context) {
 	resp.Success(c, result)
 }
 
+// GetStatus godoc
+// @Summary 查询任务状态
+// @Description 根据任务 UUID 查询处理状态和结果
+// @Tags 任务
+// @Produce json
+// @Param id path string true "任务 UUID"
+// @Success 200 {object} resp.Response
+// @Failure 404 {object} resp.Response
+// @Security ApiKeyAuth
+// @Router /v1/jobs/{id} [get]
 func (h *JobHandler) GetStatus(c *gin.Context) {
 	uuid := c.Param("id")
 	job, err := h.svc.GetByUUID(uuid, getTenantID(c))

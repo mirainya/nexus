@@ -25,7 +25,18 @@ import (
 	"github.com/mirainya/nexus/pkg/database"
 	"github.com/mirainya/nexus/pkg/logger"
 	"github.com/mirainya/nexus/pkg/vectordb"
+
+	_ "github.com/mirainya/nexus/docs"
 )
+
+// @title Nexus API
+// @version 1.0
+// @description LLM 文档处理与知识图谱 API 中间件
+// @host localhost:8080
+// @BasePath /api
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 
 func main() {
 	mode := flag.String("mode", "all", "run mode: api, worker, all")

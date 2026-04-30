@@ -23,6 +23,9 @@ import type {
   Credential,
   CredentialCreateRequest,
   APIKeyUsage,
+  Tenant,
+  TenantCreateRequest,
+  TenantUpdateRequest,
 } from './types';
 
 const api = axios.create({
@@ -141,4 +144,11 @@ export const credentialApi = {
   create: (data: CredentialCreateRequest) => api.post<unknown, Credential>('/admin/credentials', data),
   update: (id: number, data: Partial<CredentialCreateRequest & { active?: boolean }>) => api.put<unknown, Credential>(`/admin/credentials/${id}`, data),
   delete: (id: number) => api.delete(`/admin/credentials/${id}`),
+};
+
+export const tenantApi = {
+  list: () => api.get<unknown, Tenant[]>('/admin/tenants'),
+  create: (data: TenantCreateRequest) => api.post<unknown, Tenant>('/admin/tenants', data),
+  update: (id: number, data: TenantUpdateRequest) => api.put<unknown, Tenant>(`/admin/tenants/${id}`, data),
+  delete: (id: number) => api.delete(`/admin/tenants/${id}`),
 };

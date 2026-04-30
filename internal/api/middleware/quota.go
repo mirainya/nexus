@@ -23,12 +23,6 @@ func QuotaCheck(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if apiKey.DailyLimit == 0 && apiKey.MonthlyLimit == 0 &&
-			apiKey.DailyTokens == 0 && apiKey.MonthlyTokens == 0 {
-			c.Next()
-			return
-		}
-
 		today := time.Now().Format("2006-01-02")
 		month := time.Now().Format("2006-01")
 
@@ -67,6 +61,34 @@ func QuotaCheck(db *gorm.DB) gin.HandlerFunc {
 				c.JSON(http.StatusTooManyRequests, gin.H{"code": 429, "message": "monthly token limit exceeded"})
 				c.Abort()
 				return
+			}
+		}
+
+		// Tenant-level quota
+		if tenantID, ok := c.Get("tenant_id"); ok {
+			if tid, ok := tenantID.(uint); ok && tid > 0 {
+				var tenant model.Tenant
+				if err := db.First(&tenant, tid).Error; err == nil && (tenant.MonthlyRequestLimit > 0 || tenant.MonthlyTokenLimit > 0) {
+					var tenantMonthly struct {
+						Requests int
+						Tokens   int64
+					}
+					db.Model(&model.APIUsage{}).
+						Select("COALESCE(SUM(requests), 0) as requests, COALESCE(SUM(tokens), 0) as tokens").
+						Where("api_key_id IN (SELECT id FROM api_keys WHERE tenant_id = ?) AND date LIKE ?", tid, month+"%").
+						Scan(&tenantMonthly)
+
+					if tenant.MonthlyRequestLimit > 0 && tenantMonthly.Requests >= tenant.MonthlyRequestLimit {
+						c.JSON(http.StatusTooManyRequests, gin.H{"code": 429, "message": "tenant monthly request limit exceeded"})
+						c.Abort()
+						return
+					}
+					if tenant.MonthlyTokenLimit > 0 && tenantMonthly.Tokens >= tenant.MonthlyTokenLimit {
+						c.JSON(http.StatusTooManyRequests, gin.H{"code": 429, "message": "tenant monthly token limit exceeded"})
+						c.Abort()
+						return
+					}
+				}
 			}
 		}
 

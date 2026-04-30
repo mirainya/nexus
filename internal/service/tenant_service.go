@@ -17,25 +17,31 @@ type TenantCreateRequest struct {
 }
 
 type TenantUpdateRequest struct {
-	Name   string `json:"name"`
-	Active *bool  `json:"active"`
+	Name                string `json:"name"`
+	Active              *bool  `json:"active"`
+	MonthlyRequestLimit *int   `json:"monthly_request_limit"`
+	MonthlyTokenLimit   *int64 `json:"monthly_token_limit"`
 }
 
 type TenantResponse struct {
-	ID        uint      `json:"id"`
-	UUID      string    `json:"uuid"`
-	Name      string    `json:"name"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
+	ID                  uint      `json:"id"`
+	UUID                string    `json:"uuid"`
+	Name                string    `json:"name"`
+	Active              bool      `json:"active"`
+	MonthlyRequestLimit int       `json:"monthly_request_limit"`
+	MonthlyTokenLimit   int64     `json:"monthly_token_limit"`
+	CreatedAt           time.Time `json:"created_at"`
 }
 
 func toTenantResponse(t *model.Tenant) TenantResponse {
 	return TenantResponse{
-		ID:        t.ID,
-		UUID:      t.UUID,
-		Name:      t.Name,
-		Active:    t.Active,
-		CreatedAt: t.CreatedAt,
+		ID:                  t.ID,
+		UUID:                t.UUID,
+		Name:                t.Name,
+		Active:              t.Active,
+		MonthlyRequestLimit: t.MonthlyRequestLimit,
+		MonthlyTokenLimit:   t.MonthlyTokenLimit,
+		CreatedAt:           t.CreatedAt,
 	}
 }
 
@@ -75,6 +81,12 @@ func (s *TenantService) Update(id uint, req TenantUpdateRequest) (*TenantRespons
 	}
 	if req.Active != nil {
 		updates["active"] = *req.Active
+	}
+	if req.MonthlyRequestLimit != nil {
+		updates["monthly_request_limit"] = *req.MonthlyRequestLimit
+	}
+	if req.MonthlyTokenLimit != nil {
+		updates["monthly_token_limit"] = *req.MonthlyTokenLimit
 	}
 	if len(updates) > 0 {
 		if err := s.db.Model(&t).Updates(updates).Error; err != nil {

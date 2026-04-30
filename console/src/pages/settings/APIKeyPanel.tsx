@@ -4,10 +4,10 @@ import { Plus, Trash2, Copy, BarChart3 } from 'lucide-react';
 import { Card, Button, Badge } from '../../components/UI';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { apiKeyApi } from '../../api';
-import type { APIKey } from '../../api/types';
+import { apiKeyApi, tenantApi } from '../../api';
+import type { APIKey, Tenant } from '../../api/types';
 
-const emptyForm = { name: '', expires_at: '', daily_limit: '0', monthly_limit: '0', daily_tokens: '0', monthly_tokens: '0' };
+const emptyForm = { name: '', tenant_id: '', expires_at: '', daily_limit: '0', monthly_limit: '0', daily_tokens: '0', monthly_tokens: '0' };
 
 export default function APIKeyPanel() {
   const queryClient = useQueryClient();
@@ -20,6 +20,9 @@ export default function APIKeyPanel() {
 
   const { data } = useQuery({ queryKey: ['api-keys'], queryFn: () => apiKeyApi.list() });
   const keys: APIKey[] = (data as any)?.data ?? [];
+
+  const { data: tenantData } = useQuery({ queryKey: ['tenants'], queryFn: () => tenantApi.list() });
+  const tenants: Tenant[] = (tenantData as any)?.data ?? [];
 
   const { data: usageData } = useQuery({
     queryKey: ['api-key-usage', usageId],
@@ -34,6 +37,7 @@ export default function APIKeyPanel() {
     mutationFn: (d: typeof emptyForm) => {
       const payload = {
         name: d.name,
+        tenant_id: parseInt(d.tenant_id) || 0,
         expires_at: d.expires_at || undefined,
         daily_limit: parseInt(d.daily_limit) || 0,
         monthly_limit: parseInt(d.monthly_limit) || 0,
@@ -71,6 +75,7 @@ export default function APIKeyPanel() {
     setEditId(k.id);
     setForm({
       name: k.name,
+      tenant_id: k.tenant_id.toString(),
       expires_at: k.expires_at ? k.expires_at.slice(0, 10) : '',
       daily_limit: k.daily_limit.toString(),
       monthly_limit: k.monthly_limit.toString(),
@@ -102,6 +107,7 @@ export default function APIKeyPanel() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700">{k.name}</span>
                 <Badge variant={k.active ? 'success' : 'default'}>{k.active ? '启用' : '禁用'}</Badge>
+                <span className="text-xs text-gray-400">租户: {tenants.find(t => t.id === k.tenant_id)?.name || k.tenant_id}</span>
                 {k.expires_at && <span className="text-xs text-gray-400">过期: {k.expires_at.slice(0, 10)}</span>}
               </div>
               <div className="flex items-center gap-3 mt-1.5">
@@ -162,6 +168,13 @@ export default function APIKeyPanel() {
               <div>
                 <label className={labelCls}>名称</label>
                 <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="My Project" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>所属租户</label>
+                <select value={form.tenant_id} onChange={e => setForm({ ...form, tenant_id: e.target.value })} className={inputCls} disabled={!!editId}>
+                  <option value="">请选择租户</option>
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>过期时间 <span className="text-gray-300">(留空则永不过期)</span></label>

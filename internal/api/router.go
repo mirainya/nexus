@@ -12,6 +12,8 @@ import (
 	"github.com/mirainya/nexus/pkg/config"
 	"github.com/mirainya/nexus/pkg/vectordb"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
 	"gorm.io/gorm"
 )
@@ -42,6 +44,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Services
 	parseSvc := service.NewParseService(db, gw)

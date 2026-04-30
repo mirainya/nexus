@@ -20,6 +20,9 @@ func Init() {
 	pipeline.Register(&ContextLoader{})
 	pipeline.Register(&EntityAlign{})
 	pipeline.Register(&ImageAssess{})
+	pipeline.Register(&SubPipeline{})
+	pipeline.Register(&Router{})
+	pipeline.Register(&Summarizer{})
 }
 
 func parseJSON(s string, v any) error {

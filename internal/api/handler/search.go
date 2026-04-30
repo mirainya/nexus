@@ -15,6 +15,18 @@ func NewSearchHandler(svc *service.SearchService) *SearchHandler {
 	return &SearchHandler{svc: svc}
 }
 
+// Search godoc
+// @Summary 语义搜索
+// @Description 基于向量和关键词的混合搜索，返回相关文档和实体
+// @Tags 搜索
+// @Accept json
+// @Produce json
+// @Param request body service.SearchRequest true "搜索请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Failure 500 {object} resp.Response
+// @Security ApiKeyAuth
+// @Router /v1/search [post]
 func (h *SearchHandler) Search(c *gin.Context) {
 	var req service.SearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

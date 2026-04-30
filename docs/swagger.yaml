@@ -1,0 +1,196 @@
+basePath: /api
+definitions:
+  resp.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  service.JobSubmitRequest:
+    properties:
+      callback_url:
+        type: string
+      content:
+        type: string
+      credential_id:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      pipeline_id:
+        type: integer
+      skip_cache:
+        type: boolean
+      source_url:
+        type: string
+      type:
+        type: string
+    required:
+    - pipeline_id
+    - type
+    type: object
+  service.ParseRequest:
+    properties:
+      content:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      pipeline_id:
+        type: integer
+      skip_cache:
+        type: boolean
+      source_url:
+        type: string
+      type:
+        type: string
+    required:
+    - type
+    type: object
+  service.SearchRequest:
+    properties:
+      limit:
+        type: integer
+      mode:
+        type: string
+      query:
+        type: string
+    required:
+    - query
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: LLM 文档处理与知识图谱 API 中间件
+  title: Nexus API
+  version: "1.0"
+paths:
+  /v1/jobs:
+    post:
+      consumes:
+      - application/json
+      description: 提交文档到 Pipeline 进行异步处理，返回任务 ID
+      parameters:
+      - description: 任务提交请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.JobSubmitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 提交处理任务
+      tags:
+      - 任务
+  /v1/jobs/{id}:
+    get:
+      description: 根据任务 UUID 查询处理状态和结果
+      parameters:
+      - description: 任务 UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询任务状态
+      tags:
+      - 任务
+  /v1/parse:
+    post:
+      consumes:
+      - application/json
+      description: 同步调用 LLM 解析文档内容，提取实体和关系
+      parameters:
+      - description: 解析请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.ParseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 同步解析文档
+      tags:
+      - 解析
+  /v1/search:
+    post:
+      consumes:
+      - application/json
+      description: 基于向量和关键词的混合搜索，返回相关文档和实体
+      parameters:
+      - description: 搜索请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.SearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/resp.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/resp.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 语义搜索
+      tags:
+      - 搜索
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

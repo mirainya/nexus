@@ -15,6 +15,7 @@ import PlaygroundPage from './pages/playground';
 import SearchPage from './pages/search';
 import GraphPage from './pages/graph';
 import ObservabilityPage from './pages/observability';
+import TenantsPage from './pages/tenants';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="playground" element={<PlaygroundPage />} />
               <Route path="search" element={<SearchPage />} />
               <Route path="observability" element={<ObservabilityPage />} />
+              <Route path="tenants" element={<TenantsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

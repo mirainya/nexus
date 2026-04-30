@@ -15,6 +15,18 @@ func NewParseHandler(svc *service.ParseService) *ParseHandler {
 	return &ParseHandler{svc: svc}
 }
 
+// Parse godoc
+// @Summary 同步解析文档
+// @Description 同步调用 LLM 解析文档内容，提取实体和关系
+// @Tags 解析
+// @Accept json
+// @Produce json
+// @Param request body service.ParseRequest true "解析请求"
+// @Success 200 {object} resp.Response
+// @Failure 400 {object} resp.Response
+// @Failure 500 {object} resp.Response
+// @Security ApiKeyAuth
+// @Router /v1/parse [post]
 func (h *ParseHandler) Parse(c *gin.Context) {
 	var req service.ParseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
