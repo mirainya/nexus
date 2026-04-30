@@ -17,13 +17,14 @@ import (
 )
 
 type ParseService struct {
-	db     *gorm.DB
-	engine *pipeline.Engine
-	gw     *llm.Gateway
+	db      *gorm.DB
+	engine  *pipeline.Engine
+	gw      *llm.Gateway
+	tracker *UsageTracker
 }
 
 func NewParseService(db *gorm.DB, gw *llm.Gateway) *ParseService {
-	return &ParseService{db: db, engine: pipeline.NewEngine(), gw: gw}
+	return &ParseService{db: db, engine: pipeline.NewEngine(), gw: gw, tracker: NewUsageTracker(db)}
 }
 
 type ParseRequest struct {
@@ -33,6 +34,7 @@ type ParseRequest struct {
 	PipelineID uint           `json:"pipeline_id"`
 	SkipCache  bool           `json:"skip_cache"`
 	Metadata   map[string]any `json:"metadata"`
+	APIKeyID   *uint          `json:"-"`
 }
 
 func (s *ParseService) computeCacheKey(req ParseRequest, pipelineUpdatedAt time.Time) string {
@@ -75,6 +77,14 @@ func (s *ParseService) Parse(ctx context.Context, req ParseRequest) (map[string]
 
 	if err := s.engine.Run(ctx, p, pctx); err != nil {
 		return nil, err
+	}
+
+	var totalTokens int
+	for _, l := range pctx.StepLogs {
+		totalTokens += l.Tokens
+	}
+	if totalTokens > 0 {
+		s.tracker.Track(req.APIKeyID, totalTokens)
 	}
 
 	result := pipeline.BuildResult(pctx)

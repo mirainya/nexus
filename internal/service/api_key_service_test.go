@@ -91,7 +91,7 @@ func TestAPIKeyService_Update(t *testing.T) {
 	resp, err := svc.Update(created.ID, APIKeyUpdateRequest{
 		Name:       "renamed-key",
 		DailyLimit: &newLimit,
-	})
+	}, 0)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestAPIKeyService_Update_ClearExpiry(t *testing.T) {
 	svc := NewAPIKeyService(testDB)
 	created, _ := svc.Create(APIKeyCreateRequest{Name: "clear-expiry", ExpiresAt: "2030-01-01"})
 
-	resp, err := svc.Update(created.ID, APIKeyUpdateRequest{ExpiresAt: "null"})
+	resp, err := svc.Update(created.ID, APIKeyUpdateRequest{ExpiresAt: "null"}, 0)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestAPIKeyService_Delete(t *testing.T) {
 	svc := NewAPIKeyService(testDB)
 	created, _ := svc.Create(APIKeyCreateRequest{Name: "delete-key"})
 
-	if err := svc.Delete(created.ID); err != nil {
+	if err := svc.Delete(created.ID, 0); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
 
@@ -139,7 +139,7 @@ func TestAPIKeyService_GetUsage(t *testing.T) {
 	today := time.Now().Format("2006-01-02")
 	testDB.Create(&model.APIUsage{APIKeyID: created.ID, Date: today, Requests: 10, Tokens: 500})
 
-	usages, err := svc.GetUsage(created.ID, 7)
+	usages, err := svc.GetUsage(created.ID, 7, 0)
 	if err != nil {
 		t.Fatalf("get usage: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestAPIKeyService_GetUsage_Empty(t *testing.T) {
 	svc := NewAPIKeyService(testDB)
 	created, _ := svc.Create(APIKeyCreateRequest{Name: "no-usage-key"})
 
-	usages, err := svc.GetUsage(created.ID, 30)
+	usages, err := svc.GetUsage(created.ID, 30, 0)
 	if err != nil {
 		t.Fatalf("get usage: %v", err)
 	}

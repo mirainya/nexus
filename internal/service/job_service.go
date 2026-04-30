@@ -400,6 +400,10 @@ func (s *JobService) fireWebhook(job model.Job, event string, result any, errMsg
 	if job.CallbackURL == "" {
 		return
 	}
+	secret := config.C.Server.WebhookSecret
+	if secret == "" {
+		secret = config.C.Server.JWTSecret
+	}
 	go s.webhook.Send(job.CallbackURL, WebhookPayload{
 		Event:     event,
 		JobID:     job.ID,
@@ -408,7 +412,7 @@ func (s *JobService) fireWebhook(job model.Job, event string, result any, errMsg
 		Result:    result,
 		Error:     errMsg,
 		Timestamp: time.Now().Unix(),
-	}, config.C.Server.JWTSecret)
+	}, secret)
 }
 
 func (s *JobService) List(page, pageSize int, status string, tenantID uint) ([]model.Job, int64, error) {

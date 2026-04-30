@@ -82,7 +82,7 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, err.Error()))
 		return
 	}
-	key, err := h.svc.Update(id, req)
+	key, err := h.svc.Update(id, req, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -104,7 +104,7 @@ func (h *APIKeyHandler) Delete(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	if err := h.svc.Delete(id); err != nil {
+	if err := h.svc.Delete(id, getTenantID(c)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -132,7 +132,7 @@ func (h *APIKeyHandler) Usage(c *gin.Context) {
 			days = n
 		}
 	}
-	usage, err := h.svc.GetUsage(id, days)
+	usage, err := h.svc.GetUsage(id, days, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

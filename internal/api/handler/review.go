@@ -52,7 +52,7 @@ func (h *ReviewHandler) Approve(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Approve(id, reviewer.(string)); err != nil {
+	if err := h.svc.Approve(id, reviewer.(string), getTenantID(c)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -74,7 +74,7 @@ func (h *ReviewHandler) Reject(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Reject(id, reviewer.(string)); err != nil {
+	if err := h.svc.Reject(id, reviewer.(string), getTenantID(c)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -103,7 +103,7 @@ func (h *ReviewHandler) Modify(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Modify(id, reviewer.(string), req); err != nil {
+	if err := h.svc.Modify(id, reviewer.(string), req, getTenantID(c)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}

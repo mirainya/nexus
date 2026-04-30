@@ -15,7 +15,7 @@ func TestCredentialService_Create(t *testing.T) {
 		BaseURL:      "https://api.openai.com/v1",
 		APIKey:       "sk-test-secret-key-12345",
 		DefaultModel: "gpt-4o",
-	})
+	}, 0)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestCredentialService_GetDecrypted(t *testing.T) {
 		ProviderType: "openai",
 		BaseURL:      "https://api.openai.com/v1",
 		APIKey:       "sk-decrypt-me-12345",
-	})
+	}, 0)
 
 	cred, plain, err := svc.GetDecrypted(created.ID)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestCredentialService_GetDecrypted(t *testing.T) {
 func TestCredentialService_List(t *testing.T) {
 	svc := NewCredentialService(testDB)
 
-	list, err := svc.List(0)
+	list, err := svc.List(0, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -77,12 +77,12 @@ func TestCredentialService_Update(t *testing.T) {
 		ProviderType: "openai",
 		BaseURL:      "https://api.openai.com/v1",
 		APIKey:       "sk-update-original",
-	})
+	}, 0)
 
 	updated, err := svc.Update(created.ID, CredentialUpdateRequest{
 		Name:   "updated-name",
 		APIKey: "sk-update-new-key-12345",
-	})
+	}, 0)
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -106,9 +106,9 @@ func TestCredentialService_Delete(t *testing.T) {
 		ProviderType: "openai",
 		BaseURL:      "https://api.openai.com/v1",
 		APIKey:       "sk-delete-me",
-	})
+	}, 0)
 
-	if err := svc.Delete(created.ID); err != nil {
+	if err := svc.Delete(created.ID, 0); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
 
@@ -128,10 +128,10 @@ func TestCredentialService_GetDecrypted_Inactive(t *testing.T) {
 		ProviderType: "openai",
 		BaseURL:      "https://api.openai.com/v1",
 		APIKey:       "sk-inactive-key",
-	})
+	}, 0)
 
 	active := false
-	svc.Update(created.ID, CredentialUpdateRequest{Active: &active})
+	svc.Update(created.ID, CredentialUpdateRequest{Active: &active}, 0)
 
 	_, _, err := svc.GetDecrypted(created.ID)
 	if err == nil {

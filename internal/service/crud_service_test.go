@@ -206,7 +206,7 @@ func TestReviewService_Approve(t *testing.T) {
 	r := model.Review{Status: "pending"}
 	testDB.Create(&r)
 
-	if err := svc.Approve(r.ID, "admin"); err != nil {
+	if err := svc.Approve(r.ID, "admin", 0); err != nil {
 		t.Fatalf("approve: %v", err)
 	}
 
@@ -225,7 +225,7 @@ func TestReviewService_Reject(t *testing.T) {
 	r := model.Review{Status: "pending"}
 	testDB.Create(&r)
 
-	if err := svc.Reject(r.ID, "admin"); err != nil {
+	if err := svc.Reject(r.ID, "admin", 0); err != nil {
 		t.Fatalf("reject: %v", err)
 	}
 
@@ -242,7 +242,7 @@ func TestReviewService_Modify(t *testing.T) {
 	testDB.Create(&r)
 
 	data := map[string]any{"name": "corrected"}
-	if err := svc.Modify(r.ID, "admin", data); err != nil {
+	if err := svc.Modify(r.ID, "admin", data, 0); err != nil {
 		t.Fatalf("modify: %v", err)
 	}
 

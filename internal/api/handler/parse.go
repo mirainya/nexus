@@ -41,6 +41,11 @@ func (h *ParseHandler) Parse(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, "content is required for text type"))
 		return
 	}
+	if apiKeyID, exists := c.Get("api_key_id"); exists {
+		if id, ok := apiKeyID.(uint); ok {
+			req.APIKeyID = &id
+		}
+	}
 	result, err := h.svc.Parse(c.Request.Context(), req)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))

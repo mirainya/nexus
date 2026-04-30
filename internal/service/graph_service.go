@@ -54,7 +54,7 @@ func (s *GraphService) GetGraphData(limit int, tenantID uint) (*GraphData, error
 	}
 
 	var relations []model.Relation
-	rq := s.db.Model(&model.Relation{})
+	rq := s.db.Model(&model.Relation{}).Limit(limit * 5)
 	if tenantID > 0 {
 		rq = rq.Where("tenant_id = ?", tenantID)
 	}

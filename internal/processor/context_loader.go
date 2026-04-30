@@ -20,7 +20,7 @@ func (p *ContextLoader) Process(_ context.Context, pctx *pipeline.ProcessorConte
 	}
 
 	var entities []model.Entity
-	q := pctx.DB.Limit(200)
+	q := pctx.DB.Limit(500)
 	if pctx.TenantID > 0 {
 		q = q.Where("tenant_id = ?", pctx.TenantID)
 	}
@@ -49,7 +49,7 @@ func (p *ContextLoader) Process(_ context.Context, pctx *pipeline.ProcessorConte
 }
 
 func nameInContent(name, content string) bool {
-	return name != "" && strings.Contains(content, name)
+	return name != "" && strings.Contains(strings.ToLower(content), strings.ToLower(name))
 }
 
 func aliasInContent(aliasesJSON []byte, content string) bool {
@@ -60,8 +60,9 @@ func aliasInContent(aliasesJSON []byte, content string) bool {
 	if json.Unmarshal(aliasesJSON, &aliases) != nil {
 		return false
 	}
+	lower := strings.ToLower(content)
 	for _, a := range aliases {
-		if a != "" && strings.Contains(content, a) {
+		if a != "" && strings.Contains(lower, strings.ToLower(a)) {
 			return true
 		}
 	}

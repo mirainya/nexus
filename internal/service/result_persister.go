@@ -126,6 +126,19 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				continue
 			}
 			metaJSON, _ := json.Marshal(r.Metadata)
+
+			var existing model.Relation
+			err := tx.Where("from_entity_id = ? AND to_entity_id = ? AND type = ? AND tenant_id = ?",
+				fromID, toID, r.Type, tenantID).First(&existing).Error
+			if err == nil {
+				tx.Model(&existing).Updates(map[string]any{
+					"confidence": r.Confidence,
+					"metadata":   metaJSON,
+					"source_id":  sourceID,
+				})
+				continue
+			}
+
 			rel := model.Relation{
 				UUID:         uuid.New().String(),
 				FromEntityID: fromID,

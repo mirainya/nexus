@@ -34,7 +34,7 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, err.Error()))
 		return
 	}
-	cred, err := h.svc.Create(req)
+	cred, err := h.svc.Create(req, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -58,7 +58,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 			apiKeyID = uint(n)
 		}
 	}
-	list, err := h.svc.List(apiKeyID)
+	list, err := h.svc.List(apiKeyID, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -88,7 +88,7 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, err.Error()))
 		return
 	}
-	cred, err := h.svc.Update(id, req)
+	cred, err := h.svc.Update(id, req, getTenantID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -110,7 +110,7 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	if err := h.svc.Delete(id); err != nil {
+	if err := h.svc.Delete(id, getTenantID(c)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}

@@ -54,7 +54,13 @@ func toResponse(c *model.Credential, maskedKey string) CredentialResponse {
 	}
 }
 
-func (s *CredentialService) Create(req CredentialCreateRequest) (*CredentialResponse, error) {
+func (s *CredentialService) Create(req CredentialCreateRequest, tenantID uint) (*CredentialResponse, error) {
+	if tenantID > 0 {
+		var ak model.APIKey
+		if err := s.db.Where("id = ? AND tenant_id = ?", req.APIKeyID, tenantID).First(&ak).Error; err != nil {
+			return nil, fmt.Errorf("api key not found or not owned by tenant")
+		}
+	}
 	encrypted, err := crypto.Encrypt(req.APIKey)
 	if err != nil {
 		return nil, fmt.Errorf("encrypt api key: %w", err)
@@ -77,11 +83,14 @@ func (s *CredentialService) Create(req CredentialCreateRequest) (*CredentialResp
 	return &resp, nil
 }
 
-func (s *CredentialService) List(apiKeyID uint) ([]CredentialResponse, error) {
+func (s *CredentialService) List(apiKeyID uint, tenantID uint) ([]CredentialResponse, error) {
 	var creds []model.Credential
 	q := s.db.Order("id DESC")
 	if apiKeyID > 0 {
 		q = q.Where("api_key_id = ?", apiKeyID)
+	}
+	if tenantID > 0 {
+		q = q.Where("api_key_id IN (SELECT id FROM api_keys WHERE tenant_id = ?)", tenantID)
 	}
 	if err := q.Find(&creds).Error; err != nil {
 		return nil, err
@@ -98,9 +107,13 @@ func (s *CredentialService) List(apiKeyID uint) ([]CredentialResponse, error) {
 	return result, nil
 }
 
-func (s *CredentialService) Update(id uint, req CredentialUpdateRequest) (*CredentialResponse, error) {
+func (s *CredentialService) Update(id uint, req CredentialUpdateRequest, tenantID uint) (*CredentialResponse, error) {
 	var cred model.Credential
-	if err := s.db.First(&cred, id).Error; err != nil {
+	q := s.db.Where("id = ?", id)
+	if tenantID > 0 {
+		q = q.Where("api_key_id IN (SELECT id FROM api_keys WHERE tenant_id = ?)", tenantID)
+	}
+	if err := q.First(&cred).Error; err != nil {
 		return nil, err
 	}
 
@@ -143,8 +156,12 @@ func (s *CredentialService) Update(id uint, req CredentialUpdateRequest) (*Crede
 	return &resp, nil
 }
 
-func (s *CredentialService) Delete(id uint) error {
-	return s.db.Delete(&model.Credential{}, id).Error
+func (s *CredentialService) Delete(id uint, tenantID uint) error {
+	q := s.db.Where("id = ?", id)
+	if tenantID > 0 {
+		q = q.Where("api_key_id IN (SELECT id FROM api_keys WHERE tenant_id = ?)", tenantID)
+	}
+	return q.Delete(&model.Credential{}).Error
 }
 
 func (s *CredentialService) GetDecrypted(id uint) (*model.Credential, string, error) {

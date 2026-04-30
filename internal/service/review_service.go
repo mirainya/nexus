@@ -27,10 +27,14 @@ func (s *ReviewService) List(status string, page, pageSize int, tenantID uint) (
 	return list, total, err
 }
 
-func (s *ReviewService) Approve(id uint, reviewer string) error {
+func (s *ReviewService) Approve(id uint, reviewer string, tenantID uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		if err := tx.First(&review, id).Error; err != nil {
+		q := tx.Where("id = ?", id)
+		if tenantID > 0 {
+			q = q.Where("tenant_id = ?", tenantID)
+		}
+		if err := q.First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {
@@ -54,10 +58,14 @@ func (s *ReviewService) Approve(id uint, reviewer string) error {
 	})
 }
 
-func (s *ReviewService) Reject(id uint, reviewer string) error {
+func (s *ReviewService) Reject(id uint, reviewer string, tenantID uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		if err := tx.First(&review, id).Error; err != nil {
+		q := tx.Where("id = ?", id)
+		if tenantID > 0 {
+			q = q.Where("tenant_id = ?", tenantID)
+		}
+		if err := q.First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {
@@ -72,12 +80,24 @@ func (s *ReviewService) Reject(id uint, reviewer string) error {
 
 		if review.DocumentID != nil {
 			var entityIDs []uint
-			tx.Model(&model.Entity{}).
-				Where("source_id = ? AND confirmed = false AND deleted_at IS NULL", *review.DocumentID).
-				Pluck("id", &entityIDs)
+			var items []struct {
+				EntityID float64 `json:"entity_id"`
+			}
+			if json.Unmarshal(review.OriginalData, &items) == nil {
+				for _, item := range items {
+					if uint(item.EntityID) > 0 {
+						entityIDs = append(entityIDs, uint(item.EntityID))
+					}
+				}
+			}
+			if len(entityIDs) == 0 {
+				tx.Model(&model.Entity{}).
+					Where("source_id = ? AND confirmed = false AND deleted_at IS NULL", *review.DocumentID).
+					Pluck("id", &entityIDs)
+			}
 
 			if len(entityIDs) > 0 {
-				tx.Where("source_id = ? AND confirmed = false", *review.DocumentID).Delete(&model.Entity{})
+				tx.Where("id IN ?", entityIDs).Delete(&model.Entity{})
 				tx.Where("from_entity_id IN ? OR to_entity_id IN ?", entityIDs, entityIDs).Delete(&model.Relation{})
 			}
 		} else if review.EntityID != nil {
@@ -88,10 +108,14 @@ func (s *ReviewService) Reject(id uint, reviewer string) error {
 	})
 }
 
-func (s *ReviewService) Modify(id uint, reviewer string, data map[string]any) error {
+func (s *ReviewService) Modify(id uint, reviewer string, data map[string]any, tenantID uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		if err := tx.First(&review, id).Error; err != nil {
+		q := tx.Where("id = ?", id)
+		if tenantID > 0 {
+			q = q.Where("tenant_id = ?", tenantID)
+		}
+		if err := q.First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {

@@ -132,9 +132,13 @@ func (s *APIKeyService) List(tenantID uint) ([]APIKeyResponse, error) {
 	return result, nil
 }
 
-func (s *APIKeyService) Update(id uint, req APIKeyUpdateRequest) (*APIKeyResponse, error) {
+func (s *APIKeyService) Update(id uint, req APIKeyUpdateRequest, tenantID uint) (*APIKeyResponse, error) {
 	var ak model.APIKey
-	if err := s.db.First(&ak, id).Error; err != nil {
+	q := s.db.Where("id = ?", id)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	if err := q.First(&ak).Error; err != nil {
 		return nil, err
 	}
 	updates := map[string]any{}
@@ -180,13 +184,23 @@ func (s *APIKeyService) Update(id uint, req APIKeyUpdateRequest) (*APIKeyRespons
 	return &resp, nil
 }
 
-func (s *APIKeyService) Delete(id uint) error {
-	return s.db.Delete(&model.APIKey{}, id).Error
+func (s *APIKeyService) Delete(id uint, tenantID uint) error {
+	q := s.db.Where("id = ?", id)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	return q.Delete(&model.APIKey{}).Error
 }
 
-func (s *APIKeyService) GetUsage(apiKeyID uint, days int) ([]APIKeyUsageResponse, error) {
+func (s *APIKeyService) GetUsage(apiKeyID uint, days int, tenantID uint) ([]APIKeyUsageResponse, error) {
 	if days <= 0 {
 		days = 30
+	}
+	if tenantID > 0 {
+		var ak model.APIKey
+		if err := s.db.Where("id = ? AND tenant_id = ?", apiKeyID, tenantID).First(&ak).Error; err != nil {
+			return nil, err
+		}
 	}
 	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
 	var usages []model.APIUsage

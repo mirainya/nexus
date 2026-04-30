@@ -34,6 +34,7 @@ type ServerConfig struct {
 	GRPCPort         int             `mapstructure:"grpc_port"`
 	JWTSecret        string          `mapstructure:"jwt_secret"`
 	CredentialSecret string          `mapstructure:"credential_secret"`
+	WebhookSecret    string          `mapstructure:"webhook_secret"`
 	RateLimit        RateLimitConfig `mapstructure:"rate_limit"`
 }
 
