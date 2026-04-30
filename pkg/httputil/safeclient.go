@@ -78,8 +78,16 @@ func SafeGet(ctx context.Context, rawURL string) (*http.Response, error) {
 	if err := ValidateURL(rawURL); err != nil {
 		return nil, err
 	}
-	client := &http.Client{
-		Timeout: 30 * time.Second,
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	return safeClient(30 * time.Second).Do(req)
+}
+
+func safeClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if err := ValidateURL(req.URL.String()); err != nil {
 				return err
@@ -90,11 +98,20 @@ func SafeGet(ctx context.Context, rawURL string) (*http.Response, error) {
 			return nil
 		},
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", rawURL, nil)
+}
+
+func SafePost(ctx context.Context, rawURL string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	if err := ValidateURL(rawURL); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, body)
 	if err != nil {
 		return nil, err
 	}
-	return client.Do(req)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	return safeClient(30 * time.Second).Do(req)
 }
 
 func SafeGetBody(ctx context.Context, rawURL string, maxBytes int64) ([]byte, string, error) {

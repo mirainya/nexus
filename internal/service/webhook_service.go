@@ -19,9 +19,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type httpPostFunc func(ctx context.Context, url string, body io.Reader, headers map[string]string) (*http.Response, error)
+
 type WebhookService struct {
 	db          *gorm.DB
 	validateURL func(string) error
+	postFunc    httpPostFunc
 }
 
 type WebhookPayload struct {
@@ -35,7 +38,7 @@ type WebhookPayload struct {
 }
 
 func NewWebhookService(db *gorm.DB) *WebhookService {
-	return &WebhookService{db: db, validateURL: httputil.ValidateURL}
+	return &WebhookService{db: db, validateURL: httputil.ValidateURL, postFunc: httputil.SafePost}
 }
 
 func (s *WebhookService) Send(callbackURL string, payload WebhookPayload, secret string) {
@@ -81,14 +84,11 @@ func (s *WebhookService) doSend(callbackURL string, payload WebhookPayload, secr
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, callbackURL, bytes.NewReader(body))
-	if err != nil {
-		return 0, fmt.Errorf("create request: %w", err)
+	headers := map[string]string{
+		"Content-Type":      "application/json",
+		"X-Nexus-Signature": sig,
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Nexus-Signature", sig)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.postFunc(ctx, callbackURL, bytes.NewReader(body), headers)
 	if err != nil {
 		return 0, fmt.Errorf("send request: %w", err)
 	}

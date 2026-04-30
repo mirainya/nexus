@@ -9,6 +9,7 @@ import (
 
 	"github.com/mirainya/nexus/internal/model"
 	"github.com/mirainya/nexus/pkg/config"
+	"github.com/mirainya/nexus/pkg/crypto"
 	"github.com/mirainya/nexus/pkg/logger"
 	"github.com/mirainya/nexus/pkg/metrics"
 	"go.uber.org/zap"
@@ -52,18 +53,21 @@ func (g *Gateway) LoadFromDB() {
 	g.fallback = ""
 
 	for _, p := range list {
-		if p.APIKey == "" {
+		apiKey, err := crypto.Decrypt(p.EncryptedKey)
+		if err != nil || apiKey == "" {
+			logger.Warn("skipping provider with invalid key",
+				zap.String("provider", p.Name), zap.Error(err))
 			continue
 		}
 		switch p.Name {
 		case "openai":
-			g.providers[p.Name] = NewOpenAI(p.APIKey, p.BaseURL)
+			g.providers[p.Name] = NewOpenAI(apiKey, p.BaseURL)
 		case "anthropic":
-			g.providers[p.Name] = NewAnthropic(p.APIKey, p.BaseURL)
+			g.providers[p.Name] = NewAnthropic(apiKey, p.BaseURL)
 		case "doubao":
-			g.providers[p.Name] = NewDoubao(p.APIKey, p.BaseURL)
+			g.providers[p.Name] = NewDoubao(apiKey, p.BaseURL)
 		default:
-			g.providers[p.Name] = NewOpenAI(p.APIKey, p.BaseURL)
+			g.providers[p.Name] = NewOpenAI(apiKey, p.BaseURL)
 		}
 		g.defaults[p.Name] = p.DefaultModel
 		g.pricing[p.Name] = [2]float64{p.InputPrice, p.OutputPrice}

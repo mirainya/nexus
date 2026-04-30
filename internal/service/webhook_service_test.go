@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -30,6 +31,16 @@ func newTestWebhookService(t *testing.T, db *gorm.DB) *WebhookService {
 	t.Helper()
 	svc := NewWebhookService(db)
 	svc.validateURL = func(string) error { return nil }
+	svc.postFunc = func(ctx context.Context, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		return http.DefaultClient.Do(req)
+	}
 	return svc
 }
 
