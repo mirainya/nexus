@@ -32,11 +32,14 @@ import (
 // @title Nexus API
 // @version 1.0
 // @description LLM 文档处理与知识图谱 API 中间件
-// @host localhost:8080
+// @host localhost:7847
 // @BasePath /api
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name X-API-Key
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	mode := flag.String("mode", "all", "run mode: api, worker, all")
@@ -86,7 +89,7 @@ func main() {
 	llm.Init(db)
 	cache.Init()
 	if err := vectordb.Init(config.C.Milvus.Addr, config.C.Milvus.Collection, config.C.Milvus.Dimension); err != nil {
-		log.Fatalf("failed to init milvus: %v", err)
+		log.Printf("warning: milvus unavailable, vector search disabled: %v", err)
 	}
 	sse.Init()
 	processor.Init()

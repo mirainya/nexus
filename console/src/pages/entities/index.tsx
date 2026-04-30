@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { PageHeader, Card, Badge, EmptyState, Loading } from '../../components/UI';
+import { PageHeader, Card, Badge, EmptyState, Loading, FilterTabs, Pagination } from '../../components/UI';
 import { entityApi } from '../../api';
+
+const typeFilters = [
+  { key: '', label: '全部' },
+  { key: 'person', label: '人物' },
+  { key: 'company', label: '公司' },
+  { key: 'event', label: '事件' },
+  { key: 'location', label: '地点' },
+];
 
 export default function EntitiesPage() {
   const [page, setPage] = useState(1);
@@ -29,22 +37,14 @@ export default function EntitiesPage() {
     <div>
       <PageHeader title="实体" description={`共 ${total} 个实体`} />
 
-      <div className="flex gap-2 mb-6">
-        {['', 'person', 'company', 'event', 'location'].map(t => (
-          <button
-            key={t}
-            onClick={() => { setType(t); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              type === t ? 'bg-nexus-50 text-nexus-600' : 'text-gray-400 hover:bg-surface-hover'
-            }`}
-          >
-            {t === '' ? '全部' : t === 'person' ? '人物' : t === 'company' ? '公司' : t === 'event' ? '事件' : '地点'}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        items={typeFilters}
+        value={type}
+        onChange={v => { setType(v); setPage(1); }}
+      />
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 space-y-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-2">
           {entities.length === 0 ? (
             <EmptyState message="暂无实体" />
           ) : (
@@ -67,16 +67,9 @@ export default function EntitiesPage() {
             ))
           )}
 
-          {total > 20 && (
-            <div className="flex justify-center gap-2 mt-4">
-              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-surface-hover disabled:opacity-30">上一页</button>
-              <span className="px-3 py-1.5 text-xs text-gray-400">第 {page} 页</span>
-              <button onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-surface-hover">下一页</button>
-            </div>
-          )}
+          <Pagination page={page} total={total} pageSize={20} onChange={setPage} />
         </div>
 
-        {/* Relations Panel */}
         <div>
           <Card>
             <h4 className="text-sm font-medium text-gray-600 mb-3">关系</h4>

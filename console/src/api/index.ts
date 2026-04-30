@@ -88,7 +88,7 @@ export const reviewApi = {
   list: (params?: { page?: number; page_size?: number; status?: string }) => api.get<unknown, PaginatedData<Review>>('/admin/reviews', { params }),
   approve: (id: number) => api.put(`/admin/reviews/${id}/approve`),
   reject: (id: number) => api.put(`/admin/reviews/${id}/reject`),
-  modify: (id: number, data: { modified_data: unknown }) => api.put(`/admin/reviews/${id}/modify`, data),
+  modify: (id: number, data: Record<string, unknown>) => api.put(`/admin/reviews/${id}/modify`, data),
 };
 
 export const entityApi = {

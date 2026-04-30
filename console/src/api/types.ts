@@ -271,7 +271,6 @@ export interface APIKey {
 
 export interface APIKeyCreateRequest {
   name: string;
-  tenant_id: number;
   expires_at?: string;
   daily_limit?: number;
   monthly_limit?: number;

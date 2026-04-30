@@ -98,14 +98,14 @@ export default function DashboardPage() {
     <div>
       <PageHeader title="仪表盘" description="Nexus 实例概览" />
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="总任务" value={s?.jobs.total ?? 0} icon={ListTodo} color="from-nexus-400 to-nexus-500" />
         <StatCard label="成功率" value={successRate} icon={CheckCircle} color="from-emerald-300 to-emerald-400" />
         <StatCard label="总 Token" value={(s?.llm.total_tokens ?? 0).toLocaleString()} icon={Zap} color="from-lavender-300 to-lavender-400" />
         <StatCard label="总费用" value={`$${(s?.llm.total_cost ?? 0).toFixed(4)}`} icon={DollarSign} color="from-sakura-300 to-sakura-400" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <TrendChart data={s?.daily_trend ?? []} />
         <EntityPieChart data={s?.entities.distribution ?? []} />
       </div>

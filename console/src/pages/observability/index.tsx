@@ -5,20 +5,23 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
-import { PageHeader, Card, Badge, Loading, EmptyState } from '../../components/UI';
+import { PageHeader, Card, Badge, Loading, EmptyState, Tabs, FilterTabs } from '../../components/UI';
 import { statsApi } from '../../api';
 import type {
   PipelinePerformance, LLMPerformanceStats, ErrorAnalysis,
 } from '../../api/types';
 
-type Tab = 'pipeline' | 'llm' | 'errors';
-const tabs: { key: Tab; label: string; icon: typeof Activity }[] = [
+const tabItems = [
   { key: 'pipeline', label: 'Pipeline 性能', icon: Activity },
   { key: 'llm', label: 'LLM 分析', icon: Cpu },
   { key: 'errors', label: '错误追踪', icon: AlertTriangle },
 ];
 
-const dayOptions = [7, 14, 30];
+const dayFilters = [
+  { key: '7', label: '7天' },
+  { key: '14', label: '14天' },
+  { key: '30', label: '30天' },
+];
 
 export default function ObservabilityPage() {
   const [tab, setTab] = useState<Tab>('pipeline');
@@ -30,43 +33,11 @@ export default function ObservabilityPage() {
         title="可观测性"
         description="Pipeline 性能分析、LLM 调用追踪、错误监控"
         action={
-          <div className="flex gap-1">
-            {dayOptions.map(d => (
-              <button
-                key={d}
-                onClick={() => setDays(d)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  days === d
-                    ? 'bg-nexus-50 text-nexus-600 border border-nexus-200'
-                    : 'bg-surface-hover text-gray-500 border border-transparent hover:text-gray-700'
-                }`}
-              >
-                {d}天
-              </button>
-            ))}
-          </div>
+          <FilterTabs items={dayFilters} value={String(days)} onChange={v => setDays(Number(v))} />
         }
       />
 
-      <div className="flex gap-2 mb-6">
-        {tabs.map(t => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                tab === t.key
-                  ? 'bg-nexus-50 text-nexus-600 border border-nexus-200'
-                  : 'bg-surface-hover text-gray-500 border border-transparent hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      <Tabs items={tabItems} value={tab} onChange={v => setTab(v as Tab)} />
 
       {tab === 'pipeline' && <PipelineTab days={days} />}
       {tab === 'llm' && <LLMTab days={days} />}

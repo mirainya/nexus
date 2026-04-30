@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { PageHeader, Card, StatusBadge, EmptyState, Loading } from '../../components/UI';
+import { PageHeader, Card, StatusBadge, EmptyState, Loading, FilterTabs, Pagination } from '../../components/UI';
 import { jobApi } from '../../api';
+
+const statusFilters = [
+  { key: '', label: '全部' },
+  { key: 'pending', label: '等待中' },
+  { key: 'running', label: '运行中' },
+  { key: 'completed', label: '已完成' },
+  { key: 'failed', label: '失败' },
+];
 
 const stepStatusMap: Record<string, { label: string; color: string }> = {
   pending: { label: '等待', color: 'text-gray-400' },
@@ -61,6 +69,7 @@ function StepProgress({ job }: { job: any }) {
 export default function JobsPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   const hasRunning = (data: any) => {
     const jobs = data?.data?.list ?? [];
@@ -75,7 +84,6 @@ export default function JobsPage() {
 
   const jobs = (data as any)?.data?.list ?? [];
   const total = (data as any)?.data?.total ?? 0;
-  const [expanded, setExpanded] = useState<number | null>(null);
 
   if (isLoading) return <Loading />;
 
@@ -83,20 +91,11 @@ export default function JobsPage() {
     <div>
       <PageHeader title="任务" description={`共 ${total} 个任务`} />
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {['', 'pending', 'running', 'completed', 'failed'].map(s => (
-          <button
-            key={s}
-            onClick={() => { setStatus(s); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              status === s ? 'bg-nexus-50 text-nexus-600' : 'text-gray-400 hover:bg-surface-hover'
-            }`}
-          >
-            {s === '' ? '全部' : s === 'pending' ? '等待中' : s === 'running' ? '运行中' : s === 'completed' ? '已完成' : '失败'}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        items={statusFilters}
+        value={status}
+        onChange={v => { setStatus(v); setPage(1); }}
+      />
 
       {jobs.length === 0 ? (
         <EmptyState message="暂无任务" />
@@ -132,14 +131,7 @@ export default function JobsPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {total > 20 && (
-        <div className="flex justify-center gap-2 mt-6">
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-surface-hover disabled:opacity-30">上一页</button>
-          <span className="px-3 py-1.5 text-xs text-gray-400">第 {page} 页</span>
-          <button onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-surface-hover">下一页</button>
-        </div>
-      )}
+      <Pagination page={page} total={total} pageSize={20} onChange={setPage} />
     </div>
   );
 }

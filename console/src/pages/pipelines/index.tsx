@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Settings2 } from 'lucide-react';
-import { PageHeader, Card, Button, Badge, EmptyState, Loading } from '../../components/UI';
+import { PageHeader, Card, Button, Badge, EmptyState, Loading, Modal, Input, Textarea } from '../../components/UI';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { pipelineApi } from '../../api';
@@ -49,31 +49,22 @@ export default function PipelinesPage() {
         action={<Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> 新建流水线</Button>}
       />
 
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-2xl border border-border-soft p-6 w-full max-w-md shadow-xl animate-scale-in" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">新建流水线</h3>
-            <div className="space-y-3">
-              <input
-                placeholder="流水线名称"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 focus:ring-2 focus:ring-nexus-100"
-              />
-              <textarea
-                placeholder="描述"
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-border-soft bg-surface text-sm focus:outline-none focus:border-nexus-300 focus:ring-2 focus:ring-nexus-100 h-24 resize-none"
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => setShowCreate(false)}>取消</Button>
-              <Button onClick={() => createMut.mutate({ ...form, active: true })} disabled={!form.name} loading={createMut.isPending}>创建</Button>
-            </div>
-          </div>
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="新建流水线"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>取消</Button>
+            <Button onClick={() => createMut.mutate({ ...form, active: true })} disabled={!form.name} loading={createMut.isPending}>创建</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Input placeholder="流水线名称" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <Textarea placeholder="描述" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="h-24" />
         </div>
-      )}
+      </Modal>
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -88,7 +79,7 @@ export default function PipelinesPage() {
       {pipelines.length === 0 ? (
         <EmptyState message="暂无流水线，创建第一个吧" />
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {pipelines.map((p: any) => (
             <Card key={p.id} onClick={() => navigate(`/pipelines/${p.id}`)} className="group">
               <div className="flex items-start justify-between">
