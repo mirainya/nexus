@@ -88,6 +88,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	// 对外 API（API Key 认证）
 	v1 := r.Group("/api/v1", middleware.APIKeyAuth(db), middleware.QuotaCheck(db))
 	{
+		v1.GET("/pipelines", pipelineH.ListPublic)
 		v1.POST("/parse", parseH.Parse)
 		v1.POST("/jobs", jobH.Submit)
 		v1.GET("/jobs/:id", jobH.GetStatus)

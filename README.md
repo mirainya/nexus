@@ -144,12 +144,9 @@ npm run dev
 | GET | `/api/v1/jobs/:id` | 查询任务状态和结果 |
 | GET | `/api/v1/jobs/:id/events` | SSE 实时进度推送 |
 | POST | `/api/v1/search` | 混合语义搜索 |
-| GET | `/api/v1/entities` | 查询实体列表 |
-| GET | `/api/v1/entities/:id` | 查询实体详情 |
-| GET | `/api/v1/entities/:id/relations` | 查询实体关系 |
-| GET | `/api/v1/graph` | 获取知识图谱数据 |
-| POST | `/api/v1/recommend` | 场景推荐 |
-| POST | `/api/v1/upload` | 文件上传 |
+| GET | `/api/v1/pipelines` | 查询可用 Pipeline 列表（供选择 `pipeline_id`） |
+
+> **关于 `persist_graph` 字段**：`POST /api/v1/jobs` 支持可选布尔字段 `persist_graph`（默认 `false`）。为 `true` 时在本地沉淀实体/关系知识图谱；为 `false` 时只返回解析结果，不落图谱。
 
 ### 管理 API（JWT 认证）
 

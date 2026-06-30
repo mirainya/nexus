@@ -13,6 +13,7 @@ type Job struct {
 	CallbackURL  string         `gorm:"type:varchar(1024)" json:"callback_url"`
 	CurrentStep  int            `gorm:"default:0" json:"current_step"`
 	TotalSteps   int            `gorm:"default:0" json:"total_steps"`
+	PersistGraph bool           `gorm:"default:false" json:"persist_graph"`
 	Error        string         `gorm:"type:text" json:"error,omitempty"`
 	APIKeyID     *uint          `gorm:"index" json:"api_key_id,omitempty"`
 	CredentialID *uint          `gorm:"index" json:"credential_id,omitempty"`

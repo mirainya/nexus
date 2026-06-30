@@ -80,6 +80,40 @@ func (h *PipelineHandler) List(c *gin.Context) {
 	resp.Success(c, list)
 }
 
+// ListPublic godoc
+// @Summary 获取可用 Pipeline 列表
+// @Description 对外只读端点，返回所有启用的 Pipeline 精简信息（仅 id/name/description），供第三方提交任务时选择 pipeline_id
+// @Tags Pipeline
+// @Produce json
+// @Success 200 {object} resp.Response
+// @Failure 500 {object} resp.Response
+// @Security ApiKeyAuth
+// @Router /v1/pipelines [get]
+func (h *PipelineHandler) ListPublic(c *gin.Context) {
+	all, err := h.svc.List()
+	if err != nil {
+		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
+		return
+	}
+	type publicPipeline struct {
+		ID          uint   `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	list := make([]publicPipeline, 0, len(all))
+	for _, p := range all {
+		if !p.Active {
+			continue
+		}
+		list = append(list, publicPipeline{
+			ID:          p.ID,
+			Name:        p.Name,
+			Description: p.Description,
+		})
+	}
+	resp.Success(c, list)
+}
+
 // Update godoc
 // @Summary 更新 Pipeline
 // @Description 更新 Pipeline 配置

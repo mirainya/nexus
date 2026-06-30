@@ -62,6 +62,7 @@ type JobSubmitRequest struct {
 	SkipCache    bool           `json:"skip_cache"`
 	Metadata     map[string]any `json:"metadata"`
 	CredentialID *uint          `json:"credential_id"`
+	PersistGraph *bool          `json:"persist_graph"`
 	APIKeyID     *uint          `json:"-"`
 	TenantID     uint           `json:"-"`
 }
@@ -117,6 +118,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		return nil, err
 	}
 
+	persistGraph := req.PersistGraph != nil && *req.PersistGraph
 	job := model.Job{
 		UUID:         uuid.New().String(),
 		DocumentID:   doc.ID,
@@ -127,6 +129,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		APIKeyID:     req.APIKeyID,
 		CredentialID: req.CredentialID,
 		TenantID:     req.TenantID,
+		PersistGraph: persistGraph,
 	}
 	if err := s.db.Create(&job).Error; err != nil {
 		return nil, err
@@ -295,9 +298,11 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "partial", "result": result}).Error; dbErr != nil {
 				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 			}
-			if persistErr := s.persister.Persist(pctx, doc.ID, job.TenantID); persistErr != nil {
-				if dbErr := s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()}).Error; dbErr != nil {
-					logger.Warn("failed to update job error", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			if job.PersistGraph {
+				if persistErr := s.persister.Persist(pctx, doc.ID, job.TenantID); persistErr != nil {
+					if dbErr := s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()}).Error; dbErr != nil {
+						logger.Warn("failed to update job error", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+					}
 				}
 			}
 			s.hub.Publish(job.UUID, sse.Event{Type: "completed", Data: "partial"})
@@ -312,13 +317,15 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		return err
 	}
 
-	if err := s.persister.Persist(pctx, doc.ID, job.TenantID); err != nil {
-		if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()}).Error; dbErr != nil {
-			logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+	if job.PersistGraph {
+		if err := s.persister.Persist(pctx, doc.ID, job.TenantID); err != nil {
+			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()}).Error; dbErr != nil {
+				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
+			}
+			s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: "persist results: " + err.Error()})
+			s.fireWebhook(job, "job.failed", nil, "persist results: "+err.Error())
+			return err
 		}
-		s.hub.Publish(job.UUID, sse.Event{Type: "failed", Error: "persist results: " + err.Error()})
-		s.fireWebhook(job, "job.failed", nil, "persist results: "+err.Error())
-		return err
 	}
 
 	result, _ := json.Marshal(pipeline.BuildResult(pctx))
