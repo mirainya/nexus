@@ -33,7 +33,7 @@ func (h *GraphHandler) GetGraph(c *gin.Context) {
 			limit = n
 		}
 	}
-	data, err := h.svc.GetGraphData(limit, getTenantID(c))
+	data, err := h.svc.GetGraphData(limit)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

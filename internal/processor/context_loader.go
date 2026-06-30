@@ -21,8 +21,8 @@ func (p *ContextLoader) Process(_ context.Context, pctx *pipeline.ProcessorConte
 
 	var entities []model.Entity
 	q := pctx.DB.Limit(500)
-	if pctx.TenantID > 0 {
-		q = q.Where("tenant_id = ?", pctx.TenantID)
+	if pctx.APIKeyID != nil {
+		q = q.Where("api_key_id = ?", *pctx.APIKeyID)
 	}
 	q.Find(&entities)
 

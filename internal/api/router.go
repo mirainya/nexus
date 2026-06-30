@@ -57,11 +57,9 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	searchSvc := service.NewSearchService(db, gw, vectordb.Default())
 	statsSvc := service.NewStatsService(db)
 	graphSvc := service.NewGraphService(db)
-	credentialSvc := service.NewCredentialService(db)
 	apiKeySvc := service.NewAPIKeyService(db)
 	recommendSvc := service.NewRecommendService(db)
 	webhookSvc := service.NewWebhookService(db)
-	tenantSvc := service.NewTenantService(db)
 
 	// Handlers
 	parseH := handler.NewParseHandler(parseSvc)
@@ -77,10 +75,8 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 	searchH := handler.NewSearchHandler(searchSvc)
 	statsH := handler.NewStatsHandler(statsSvc)
 	graphH := handler.NewGraphHandler(graphSvc)
-	credentialH := handler.NewCredentialHandler(credentialSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
 	webhookH := handler.NewWebhookHandler(webhookSvc)
-	tenantH := handler.NewTenantHandler(tenantSvc)
 
 	// Auth (no middleware)
 	r.POST("/api/admin/auth/login", authH.Login)
@@ -150,11 +146,6 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 
 		admin.GET("/graph", graphH.GetGraph)
 
-		admin.GET("/credentials", credentialH.List)
-		admin.POST("/credentials", credentialH.Create)
-		admin.PUT("/credentials/:id", credentialH.Update)
-		admin.DELETE("/credentials/:id", credentialH.Delete)
-
 		admin.GET("/api-keys", apiKeyH.List)
 		admin.POST("/api-keys", apiKeyH.Create)
 		admin.PUT("/api-keys/:id", apiKeyH.Update)
@@ -162,11 +153,6 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client, hub *sse.Hub, gw *llm.G
 		admin.GET("/api-keys/:id/usage", apiKeyH.Usage)
 
 		admin.GET("/webhooks", webhookH.List)
-
-		admin.GET("/tenants", tenantH.List)
-		admin.POST("/tenants", tenantH.Create)
-		admin.PUT("/tenants/:id", tenantH.Update)
-		admin.DELETE("/tenants/:id", tenantH.Delete)
 	}
 
 	console.RegisterRoutes(r)

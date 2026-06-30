@@ -12,13 +12,10 @@ type ReviewService struct{ db *gorm.DB }
 
 func NewReviewService(db *gorm.DB) *ReviewService { return &ReviewService{db: db} }
 
-func (s *ReviewService) List(status string, page, pageSize int, tenantID uint) ([]model.Review, int64, error) {
+func (s *ReviewService) List(status string, page, pageSize int) ([]model.Review, int64, error) {
 	var list []model.Review
 	var total int64
 	q := s.db.Model(&model.Review{})
-	if tenantID > 0 {
-		q = q.Where("tenant_id = ?", tenantID)
-	}
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}
@@ -27,14 +24,10 @@ func (s *ReviewService) List(status string, page, pageSize int, tenantID uint) (
 	return list, total, err
 }
 
-func (s *ReviewService) Approve(id uint, reviewer string, tenantID uint) error {
+func (s *ReviewService) Approve(id uint, reviewer string) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		q := tx.Where("id = ?", id)
-		if tenantID > 0 {
-			q = q.Where("tenant_id = ?", tenantID)
-		}
-		if err := q.First(&review).Error; err != nil {
+		if err := tx.Where("id = ?", id).First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {
@@ -58,14 +51,10 @@ func (s *ReviewService) Approve(id uint, reviewer string, tenantID uint) error {
 	})
 }
 
-func (s *ReviewService) Reject(id uint, reviewer string, tenantID uint) error {
+func (s *ReviewService) Reject(id uint, reviewer string) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		q := tx.Where("id = ?", id)
-		if tenantID > 0 {
-			q = q.Where("tenant_id = ?", tenantID)
-		}
-		if err := q.First(&review).Error; err != nil {
+		if err := tx.Where("id = ?", id).First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {
@@ -108,14 +97,10 @@ func (s *ReviewService) Reject(id uint, reviewer string, tenantID uint) error {
 	})
 }
 
-func (s *ReviewService) Modify(id uint, reviewer string, data map[string]any, tenantID uint) error {
+func (s *ReviewService) Modify(id uint, reviewer string, data map[string]any) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var review model.Review
-		q := tx.Where("id = ?", id)
-		if tenantID > 0 {
-			q = q.Where("tenant_id = ?", tenantID)
-		}
-		if err := q.First(&review).Error; err != nil {
+		if err := tx.Where("id = ?", id).First(&review).Error; err != nil {
 			return err
 		}
 		if review.Status != "pending" {

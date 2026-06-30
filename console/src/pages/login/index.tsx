@@ -17,9 +17,6 @@ export default function LoginPage() {
     try {
       const res: any = await authApi.login({ username, password });
       localStorage.setItem('token', res.data.token);
-      if (res.data.tenant_id) {
-        localStorage.setItem('tenant_id', String(res.data.tenant_id));
-      }
       navigate('/');
     } catch {
       setError('用户名或密码错误');

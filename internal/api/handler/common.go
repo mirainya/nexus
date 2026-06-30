@@ -18,14 +18,13 @@ func parsePagination(c *gin.Context) (int, int) {
 	return page, pageSize
 }
 
-func getTenantID(c *gin.Context) uint {
-	if v, ok := c.Get("tenant_id"); ok {
-		switch tid := v.(type) {
-		case uint:
-			return tid
-		case float64:
-			return uint(tid)
+// getAPIKeyID returns the calling API key's id (set by APIKeyAuth middleware),
+// or nil for admin JWT requests. Services treat nil as "no key filter" (admin sees all).
+func getAPIKeyID(c *gin.Context) *uint {
+	if v, ok := c.Get("api_key_id"); ok {
+		if id, ok := v.(uint); ok {
+			return &id
 		}
 	}
-	return 0
+	return nil
 }

@@ -6,7 +6,6 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { llmProviderApi } from '../../api';
 import APIKeyPanel from './APIKeyPanel';
-import CredentialPanel from './CredentialPanel';
 
 interface LLMProvider {
   id: number;
@@ -25,7 +24,6 @@ interface LLMProvider {
 const tabs = [
   { key: 'llm', label: 'LLM 服务商' },
   { key: 'apikeys', label: 'API Key' },
-  { key: 'credentials', label: '外部凭证' },
 ];
 
 const emptyForm = { name: '', display_name: '', base_url: '', api_key: '', default_model: '', input_price: '', output_price: '', max_concurrency: '10', active: true };
@@ -76,7 +74,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="设置" description="管理 LLM 服务商、API Key 和外部凭证" />
+      <PageHeader title="设置" description="管理 LLM 服务商和 API Key" />
 
       <Tabs items={tabs} value={tab} onChange={setTab} />
 
@@ -161,7 +159,6 @@ export default function SettingsPage() {
       )}
 
       {tab === 'apikeys' && <APIKeyPanel />}
-      {tab === 'credentials' && <CredentialPanel />}
     </div>
   );
 }

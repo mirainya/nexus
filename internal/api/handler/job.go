@@ -47,7 +47,6 @@ func (h *JobHandler) Submit(c *gin.Context) {
 			req.APIKeyID = &id
 		}
 	}
-	req.TenantID = getTenantID(c)
 	job, err := h.svc.Submit(req)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
@@ -73,7 +72,7 @@ func (h *JobHandler) Submit(c *gin.Context) {
 // @Router /v1/jobs/{id} [get]
 func (h *JobHandler) GetStatus(c *gin.Context) {
 	uuid := c.Param("id")
-	job, err := h.svc.GetByUUID(uuid, getTenantID(c))
+	job, err := h.svc.GetByUUID(uuid, getAPIKeyID(c))
 	if err != nil {
 		resp.NotFound(c, errors.ErrJobNotFound)
 		return
@@ -142,7 +141,7 @@ func (h *JobHandler) Retry(c *gin.Context) {
 func (h *JobHandler) List(c *gin.Context) {
 	page, pageSize := parsePagination(c)
 	status := c.Query("status")
-	jobs, total, err := h.svc.List(page, pageSize, status, getTenantID(c))
+	jobs, total, err := h.svc.List(page, pageSize, status, getAPIKeyID(c))
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

@@ -15,7 +15,7 @@ type ResultPersister struct{ db *gorm.DB }
 
 func NewResultPersister(db *gorm.DB) *ResultPersister { return &ResultPersister{db: db} }
 
-func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint, tenantID uint) error {
+func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint) error {
 	return p.db.Transaction(func(tx *gorm.DB) error {
 		entityNameToID := make(map[string]uint)
 
@@ -82,7 +82,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 					Confirmed:  confirmed,
 					SourceID:   sourceID,
 					Evidence:   evidenceJSON,
-					TenantID:   tenantID,
+					APIKeyID:   pctx.APIKeyID,
 				})
 			}
 		}
@@ -117,7 +117,6 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				DocumentID:   &sourceID,
 				Status:       "pending",
 				OriginalData: originalJSON,
-				TenantID:     tenantID,
 			}
 			if err := tx.Create(&review).Error; err != nil {
 				return err
@@ -134,8 +133,8 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 			metaJSON, _ := json.Marshal(r.Metadata)
 
 			var existing model.Relation
-			err := tx.Where("from_entity_id = ? AND to_entity_id = ? AND type = ? AND tenant_id = ?",
-				fromID, toID, r.Type, tenantID).First(&existing).Error
+			err := tx.Where("from_entity_id = ? AND to_entity_id = ? AND type = ?",
+				fromID, toID, r.Type).First(&existing).Error
 			if err == nil {
 				tx.Model(&existing).Updates(map[string]any{
 					"confidence": r.Confidence,
@@ -153,7 +152,7 @@ func (p *ResultPersister) Persist(pctx *pipeline.ProcessorContext, sourceID uint
 				Metadata:     metaJSON,
 				Confidence:   r.Confidence,
 				SourceID:     sourceID,
-				TenantID:     tenantID,
+				APIKeyID:     pctx.APIKeyID,
 			})
 		}
 

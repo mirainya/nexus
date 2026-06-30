@@ -48,7 +48,6 @@ func TestMain(m *testing.M) {
 		&model.JobStepLog{},
 		&model.Review{},
 		&model.LLMProvider{},
-		&model.Credential{},
 		&model.APIUsage{},
 	)
 	model.SetDB(db)

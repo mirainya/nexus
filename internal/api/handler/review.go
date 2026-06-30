@@ -29,7 +29,7 @@ func NewReviewHandler(svc *service.ReviewService) *ReviewHandler {
 func (h *ReviewHandler) List(c *gin.Context) {
 	page, pageSize := parsePagination(c)
 	status := c.Query("status")
-	list, total, err := h.svc.List(status, page, pageSize, getTenantID(c))
+	list, total, err := h.svc.List(status, page, pageSize)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -52,7 +52,7 @@ func (h *ReviewHandler) Approve(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Approve(id, reviewer.(string), getTenantID(c)); err != nil {
+	if err := h.svc.Approve(id, reviewer.(string)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -74,7 +74,7 @@ func (h *ReviewHandler) Reject(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Reject(id, reviewer.(string), getTenantID(c)); err != nil {
+	if err := h.svc.Reject(id, reviewer.(string)); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -103,7 +103,7 @@ func (h *ReviewHandler) Modify(c *gin.Context) {
 		return
 	}
 	reviewer, _ := c.Get("username")
-	if err := h.svc.Modify(id, reviewer.(string), req, getTenantID(c)); err != nil {
+	if err := h.svc.Modify(id, reviewer.(string), req); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}

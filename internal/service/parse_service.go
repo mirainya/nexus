@@ -71,8 +71,9 @@ func (s *ParseService) Parse(ctx context.Context, req ParseRequest) (map[string]
 			SourceURL: req.SourceURL,
 			Metadata:  req.Metadata,
 		},
-		LLM: s.gw,
-		DB:  s.db,
+		LLM:      s.gw,
+		DB:       s.db,
+		APIKeyID: req.APIKeyID,
 	}
 
 	if err := s.engine.Run(ctx, p, pctx); err != nil {

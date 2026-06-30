@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, GitBranch, MessageSquareText, ListTodo,
   CheckCircle, Database, Settings, LogOut, Sparkles, FlaskConical,
-  Search, Share2, Activity, Building2, PanelLeftClose, PanelLeftOpen, Menu, X,
+  Search, Share2, Activity, PanelLeftClose, PanelLeftOpen, Menu, X,
 } from 'lucide-react';
 
 const navItems = [
@@ -16,7 +16,6 @@ const navItems = [
   { to: '/graph', icon: Share2, label: '图谱' },
   { to: '/search', icon: Search, label: '搜索推荐' },
   { to: '/observability', icon: Activity, label: '可观测性' },
-  { to: '/tenants', icon: Building2, label: '租户' },
   { to: '/playground', icon: FlaskConical, label: '测试' },
   { to: '/settings', icon: Settings, label: '设置' },
 ];

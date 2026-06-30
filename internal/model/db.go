@@ -9,7 +9,6 @@ func DB() *gorm.DB     { return db }
 
 func AutoMigrate() error {
 	return db.AutoMigrate(
-		&Tenant{},
 		&User{},
 		&APIKey{},
 		&PromptTemplate{},
@@ -22,7 +21,6 @@ func AutoMigrate() error {
 		&JobStepLog{},
 		&Review{},
 		&LLMProvider{},
-		&Credential{},
 		&APIUsage{},
 		&WebhookLog{},
 	)

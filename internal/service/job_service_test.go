@@ -41,7 +41,6 @@ func TestMain(m *testing.M) {
 		&model.JobStepLog{},
 		&model.Review{},
 		&model.LLMProvider{},
-		&model.Credential{},
 		&model.APIUsage{},
 	)
 	model.SetDB(testDB)
@@ -262,7 +261,7 @@ func TestResultPersister_PersistResults(t *testing.T) {
 		},
 	}
 
-	err := persister.Persist(pctx, doc.ID, 0)
+	err := persister.Persist(pctx, doc.ID)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}
@@ -328,7 +327,7 @@ func TestResultPersister_ExistingEntity(t *testing.T) {
 		},
 	}
 
-	err := persister.Persist(pctx, doc.ID, 0)
+	err := persister.Persist(pctx, doc.ID)
 	if err != nil {
 		t.Fatalf("persistResults: %v", err)
 	}

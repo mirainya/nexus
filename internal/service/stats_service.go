@@ -58,43 +58,28 @@ type DailyTrendItem struct {
 	Failed    int64  `json:"failed"`
 }
 
-func (s *StatsService) GetDashboardStats(tenantID uint) (*DashboardStats, error) {
+func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
 	stats := &DashboardStats{}
 
-	jobQ := s.db.Model(&model.Job{})
-	if tenantID > 0 {
-		jobQ = jobQ.Where("tenant_id = ?", tenantID)
-	}
-
-	jobQ.Count(&stats.Jobs.Total)
-	s.countJobStatus(tenantID, "completed", &stats.Jobs.Completed)
-	s.countJobStatus(tenantID, "failed", &stats.Jobs.Failed)
-	s.countJobStatus(tenantID, "running", &stats.Jobs.Running)
-	s.countJobStatus(tenantID, "pending", &stats.Jobs.Pending)
+	s.db.Model(&model.Job{}).Count(&stats.Jobs.Total)
+	s.countJobStatus("completed", &stats.Jobs.Completed)
+	s.countJobStatus("failed", &stats.Jobs.Failed)
+	s.countJobStatus("running", &stats.Jobs.Running)
+	s.countJobStatus("pending", &stats.Jobs.Pending)
 
 	var llmResult struct {
 		Tokens int64
 		Cost   float64
 	}
-	llmQ := s.db.Model(&model.JobStepLog{})
-	if tenantID > 0 {
-		llmQ = llmQ.Where("job_id IN (SELECT id FROM jobs WHERE tenant_id = ?)", tenantID)
-	}
-	llmQ.Select("COALESCE(SUM(tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost").
+	s.db.Model(&model.JobStepLog{}).
+		Select("COALESCE(SUM(tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost").
 		Scan(&llmResult)
 	stats.LLM.TotalTokens = llmResult.Tokens
 	stats.LLM.TotalCost = llmResult.Cost
 
-	entityQ := s.db.Model(&model.Entity{})
-	if tenantID > 0 {
-		entityQ = entityQ.Where("tenant_id = ?", tenantID)
-	}
-	entityQ.Count(&stats.Entities.Total)
-	distQ := s.db.Model(&model.Entity{})
-	if tenantID > 0 {
-		distQ = distQ.Where("tenant_id = ?", tenantID)
-	}
-	distQ.Select("type, COUNT(*) as count").
+	s.db.Model(&model.Entity{}).Count(&stats.Entities.Total)
+	s.db.Model(&model.Entity{}).
+		Select("type, COUNT(*) as count").
 		Group("type").
 		Scan(&stats.Entities.Distribution)
 
@@ -105,15 +90,12 @@ func (s *StatsService) GetDashboardStats(tenantID uint) (*DashboardStats, error)
 		Completed int64
 		Failed    int64
 	}
-	trendQ := s.db.Model(&model.Job{}).
+	s.db.Model(&model.Job{}).
 		Select("DATE(created_at) as date, COUNT(*) as total, "+
 			"SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, "+
 			"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed").
-		Where("created_at >= ?", since)
-	if tenantID > 0 {
-		trendQ = trendQ.Where("tenant_id = ?", tenantID)
-	}
-	trendQ.Group("DATE(created_at)").
+		Where("created_at >= ?", since).
+		Group("DATE(created_at)").
 		Order("date").
 		Scan(&dailyRows)
 
@@ -153,18 +135,14 @@ type StepPerformance struct {
 	ErrorRate     float64 `json:"error_rate"`
 }
 
-func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]PipelinePerformance, error) {
+func (s *StatsService) GetPipelinePerformance(days int) ([]PipelinePerformance, error) {
 	if days <= 0 {
 		days = 7
 	}
 	since := time.Now().AddDate(0, 0, -days)
 
 	var pipelines []model.Pipeline
-	pq := s.db.Select("id, name")
-	if tenantID > 0 {
-		pq = pq.Where("tenant_id = ?", tenantID)
-	}
-	pq.Find(&pipelines)
+	s.db.Select("id, name").Find(&pipelines)
 	pipelineNames := make(map[uint]string)
 	for _, p := range pipelines {
 		pipelineNames[p.ID] = p.Name
@@ -177,15 +155,12 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 		AvgMs      float64
 	}
 	var rows []pipelineRow
-	jq := s.db.Model(&model.Job{}).
+	s.db.Model(&model.Job{}).
 		Select("pipeline_id, COUNT(*) as total, "+
 			"SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, "+
 			"COALESCE(AVG("+durationMs("created_at", "updated_at")+"), 0) as avg_ms").
-		Where("created_at >= ?", since)
-	if tenantID > 0 {
-		jq = jq.Where("tenant_id = ?", tenantID)
-	}
-	jq.Group("pipeline_id").Scan(&rows)
+		Where("created_at >= ?", since).
+		Group("pipeline_id").Scan(&rows)
 
 	var results []PipelinePerformance
 	for _, r := range rows {
@@ -195,13 +170,10 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 		}
 
 		var durations []float64
-		dq := s.db.Model(&model.Job{}).
+		s.db.Model(&model.Job{}).
 			Select(durationMs("created_at", "updated_at")+" as dur").
-			Where("pipeline_id = ? AND created_at >= ? AND status IN ?", r.PipelineID, since, []string{"completed", "failed"})
-		if tenantID > 0 {
-			dq = dq.Where("tenant_id = ?", tenantID)
-		}
-		dq.Pluck("dur", &durations)
+			Where("pipeline_id = ? AND created_at >= ? AND status IN ?", r.PipelineID, since, []string{"completed", "failed"}).
+			Pluck("dur", &durations)
 
 		p95 := percentile(durations, 0.95)
 
@@ -214,12 +186,6 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 			Failed        int64
 		}
 		var stepRows []stepRow
-		jobSubQ := "SELECT id FROM jobs WHERE pipeline_id = ? AND created_at >= ?"
-		stepArgs := []any{r.PipelineID, since}
-		if tenantID > 0 {
-			jobSubQ += " AND tenant_id = ?"
-			stepArgs = append(stepArgs, tenantID)
-		}
 		s.db.Model(&model.JobStepLog{}).
 			Select("processor_type, "+
 				"COALESCE(AVG("+durationMs("started_at", "finished_at")+"), 0) as avg_ms, "+
@@ -227,7 +193,7 @@ func (s *StatsService) GetPipelinePerformance(days int, tenantID uint) ([]Pipeli
 				"COALESCE(AVG(cost), 0) as avg_cost, "+
 				"COUNT(*) as total, "+
 				"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed").
-			Where("job_id IN ("+jobSubQ+")", stepArgs...).
+			Where("job_id IN (SELECT id FROM jobs WHERE pipeline_id = ? AND created_at >= ?)", r.PipelineID, since).
 			Group("processor_type").
 			Order("processor_type").
 			Scan(&stepRows)
@@ -293,7 +259,7 @@ type DailyLLMUsage struct {
 	Calls  int64   `json:"calls"`
 }
 
-func (s *StatsService) GetLLMPerformance(days int, tenantID uint) (*LLMPerformanceStats, error) {
+func (s *StatsService) GetLLMPerformance(days int) (*LLMPerformanceStats, error) {
 	if days <= 0 {
 		days = 7
 	}
@@ -308,17 +274,14 @@ func (s *StatsService) GetLLMPerformance(days int, tenantID uint) (*LLMPerforman
 		Failed        int64
 	}
 	var procRows []procRow
-	llmQ := s.db.Model(&model.JobStepLog{}).
+	s.db.Model(&model.JobStepLog{}).
 		Select("processor_type, COUNT(*) as total_calls, "+
 			"COALESCE(AVG("+durationMs("started_at", "finished_at")+"), 0) as avg_ms, "+
 			"COALESCE(SUM(tokens), 0) as total_tokens, "+
 			"COALESCE(SUM(cost), 0) as total_cost, "+
 			"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed").
-		Where("created_at >= ?", since)
-	if tenantID > 0 {
-		llmQ = llmQ.Where("job_id IN (SELECT id FROM jobs WHERE tenant_id = ?)", tenantID)
-	}
-	llmQ.Group("processor_type").Order("total_tokens DESC").Scan(&procRows)
+		Where("created_at >= ?", since).
+		Group("processor_type").Order("total_tokens DESC").Scan(&procRows)
 
 	byProc := make([]ProcessorStats, 0, len(procRows))
 	for _, r := range procRows {
@@ -343,13 +306,10 @@ func (s *StatsService) GetLLMPerformance(days int, tenantID uint) (*LLMPerforman
 		Calls  int64
 	}
 	var dailyRows []dailyRow
-	dq := s.db.Model(&model.JobStepLog{}).
+	s.db.Model(&model.JobStepLog{}).
 		Select("DATE(created_at) as date, COALESCE(SUM(tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost, COUNT(*) as calls").
-		Where("created_at >= ?", since)
-	if tenantID > 0 {
-		dq = dq.Where("job_id IN (SELECT id FROM jobs WHERE tenant_id = ?)", tenantID)
-	}
-	dq.Group("DATE(created_at)").Order("date").Scan(&dailyRows)
+		Where("created_at >= ?", since).
+		Group("DATE(created_at)").Order("date").Scan(&dailyRows)
 
 	dateMap := make(map[string]DailyLLMUsage)
 	for _, r := range dailyRows {
@@ -394,7 +354,7 @@ type FailedJobBrief struct {
 	CreatedAt string `json:"created_at"`
 }
 
-func (s *StatsService) GetErrorAnalysis(days int, tenantID uint) (*ErrorAnalysis, error) {
+func (s *StatsService) GetErrorAnalysis(days int) (*ErrorAnalysis, error) {
 	if days <= 0 {
 		days = 7
 	}
@@ -405,13 +365,10 @@ func (s *StatsService) GetErrorAnalysis(days int, tenantID uint) (*ErrorAnalysis
 		Count int64
 	}
 	var trendRows []trendRow
-	tq := s.db.Model(&model.Job{}).
+	s.db.Model(&model.Job{}).
 		Select("DATE(created_at) as date, COUNT(*) as count").
-		Where("status = ? AND created_at >= ?", "failed", since)
-	if tenantID > 0 {
-		tq = tq.Where("tenant_id = ?", tenantID)
-	}
-	tq.Group("DATE(created_at)").Order("date").Scan(&trendRows)
+		Where("status = ? AND created_at >= ?", "failed", since).
+		Group("DATE(created_at)").Order("date").Scan(&trendRows)
 
 	trendMap := make(map[string]int64)
 	for _, r := range trendRows {
@@ -424,13 +381,10 @@ func (s *StatsService) GetErrorAnalysis(days int, tenantID uint) (*ErrorAnalysis
 	}
 
 	var topErrors []ErrorGroup
-	eq := s.db.Model(&model.Job{}).
+	s.db.Model(&model.Job{}).
 		Select("error, COUNT(*) as count").
-		Where("status = ? AND created_at >= ? AND error != ''", "failed", since)
-	if tenantID > 0 {
-		eq = eq.Where("tenant_id = ?", tenantID)
-	}
-	eq.Group("error").Order("count DESC").Limit(10).Scan(&topErrors)
+		Where("status = ? AND created_at >= ? AND error != ''", "failed", since).
+		Group("error").Order("count DESC").Limit(10).Scan(&topErrors)
 
 	type failedRow struct {
 		ID        uint
@@ -440,14 +394,11 @@ func (s *StatsService) GetErrorAnalysis(days int, tenantID uint) (*ErrorAnalysis
 		Pipeline  string
 	}
 	var failedRows []failedRow
-	fq := s.db.Table("jobs j").
+	s.db.Table("jobs j").
 		Select("j.id, j.uuid, j.error, j.created_at, COALESCE(p.name, '') as pipeline").
 		Joins("LEFT JOIN pipelines p ON p.id = j.pipeline_id").
-		Where("j.status = ? AND j.created_at >= ?", "failed", since)
-	if tenantID > 0 {
-		fq = fq.Where("j.tenant_id = ?", tenantID)
-	}
-	fq.Order("j.created_at DESC").Limit(20).Scan(&failedRows)
+		Where("j.status = ? AND j.created_at >= ?", "failed", since).
+		Order("j.created_at DESC").Limit(20).Scan(&failedRows)
 
 	recent := make([]FailedJobBrief, 0, len(failedRows))
 	for _, r := range failedRows {
@@ -467,12 +418,8 @@ func (s *StatsService) GetErrorAnalysis(days int, tenantID uint) (*ErrorAnalysis
 	}, nil
 }
 
-func (s *StatsService) countJobStatus(tenantID uint, status string, out *int64) {
-	q := s.db.Model(&model.Job{}).Where("status = ?", status)
-	if tenantID > 0 {
-		q = q.Where("tenant_id = ?", tenantID)
-	}
-	q.Count(out)
+func (s *StatsService) countJobStatus(status string, out *int64) {
+	s.db.Model(&model.Job{}).Where("status = ?", status).Count(out)
 }
 
 func (s *StatsService) formatDuration(ms float64) string {

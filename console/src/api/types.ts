@@ -18,7 +18,6 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
   username: string;
-  tenant_id?: number;
 }
 
 // Pipeline
@@ -259,7 +258,6 @@ export interface APIKey {
   id: number;
   name: string;
   key: string;
-  tenant_id: number;
   active: boolean;
   expires_at: string | null;
   daily_limit: number;
@@ -276,27 +274,6 @@ export interface APIKeyCreateRequest {
   monthly_limit?: number;
   daily_tokens?: number;
   monthly_tokens?: number;
-}
-
-// Credential
-export interface Credential {
-  id: number;
-  api_key_id: number;
-  name: string;
-  provider_type: string;
-  base_url: string;
-  api_key: string;
-  default_model: string;
-  active: boolean;
-}
-
-export interface CredentialCreateRequest {
-  api_key_id: number;
-  name: string;
-  provider_type: string;
-  base_url: string;
-  api_key: string;
-  default_model?: string;
 }
 
 // API Usage
@@ -375,26 +352,4 @@ export interface FailedJobBrief {
   error: string;
   pipeline: string;
   created_at: string;
-}
-
-// Tenant
-export interface Tenant {
-  id: number;
-  uuid: string;
-  name: string;
-  active: boolean;
-  monthly_request_limit: number;
-  monthly_token_limit: number;
-  created_at: string;
-}
-
-export interface TenantCreateRequest {
-  name: string;
-}
-
-export interface TenantUpdateRequest {
-  name?: string;
-  active?: boolean;
-  monthly_request_limit?: number;
-  monthly_token_limit?: number;
 }

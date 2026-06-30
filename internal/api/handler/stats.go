@@ -26,7 +26,7 @@ func NewStatsHandler(svc *service.StatsService) *StatsHandler {
 // @Security BearerAuth
 // @Router /admin/stats [get]
 func (h *StatsHandler) Dashboard(c *gin.Context) {
-	stats, err := h.svc.GetDashboardStats(getTenantID(c))
+	stats, err := h.svc.GetDashboardStats()
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -45,7 +45,7 @@ func (h *StatsHandler) Dashboard(c *gin.Context) {
 // @Router /admin/stats/pipeline-performance [get]
 func (h *StatsHandler) PipelinePerformance(c *gin.Context) {
 	days := parseDays(c)
-	data, err := h.svc.GetPipelinePerformance(days, getTenantID(c))
+	data, err := h.svc.GetPipelinePerformance(days)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -64,7 +64,7 @@ func (h *StatsHandler) PipelinePerformance(c *gin.Context) {
 // @Router /admin/stats/llm-performance [get]
 func (h *StatsHandler) LLMPerformance(c *gin.Context) {
 	days := parseDays(c)
-	data, err := h.svc.GetLLMPerformance(days, getTenantID(c))
+	data, err := h.svc.GetLLMPerformance(days)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -83,7 +83,7 @@ func (h *StatsHandler) LLMPerformance(c *gin.Context) {
 // @Router /admin/stats/errors [get]
 func (h *StatsHandler) ErrorAnalysis(c *gin.Context) {
 	days := parseDays(c)
-	data, err := h.svc.GetErrorAnalysis(days, getTenantID(c))
+	data, err := h.svc.GetErrorAnalysis(days)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return

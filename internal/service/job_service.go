@@ -61,10 +61,8 @@ type JobSubmitRequest struct {
 	CallbackURL  string         `json:"callback_url"`
 	SkipCache    bool           `json:"skip_cache"`
 	Metadata     map[string]any `json:"metadata"`
-	CredentialID *uint          `json:"credential_id"`
 	PersistGraph *bool          `json:"persist_graph"`
 	APIKeyID     *uint          `json:"-"`
-	TenantID     uint           `json:"-"`
 }
 
 func (s *JobService) computeContentHash(req JobSubmitRequest, pipelineUpdatedAt time.Time) string {
@@ -80,25 +78,17 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		return nil, fmt.Errorf("pipeline not found: %w", err)
 	}
 
-	if req.CredentialID != nil {
-		var cred model.Credential
-		if err := s.db.First(&cred, *req.CredentialID).Error; err != nil {
-			return nil, fmt.Errorf("credential not found: %w", err)
-		}
-		if req.APIKeyID != nil && cred.APIKeyID != *req.APIKeyID {
-			return nil, errors.New("credential does not belong to this api key")
-		}
-		if !cred.Active {
-			return nil, errors.New("credential is inactive")
-		}
-	}
-
 	contentHash := s.computeContentHash(req, p.UpdatedAt)
 
 	if !req.SkipCache {
 		var cached model.Job
-		err := s.db.Where("content_hash = ? AND status = ? AND tenant_id = ?", contentHash, "completed", req.TenantID).
-			Order("created_at DESC").First(&cached).Error
+		q := s.db.Where("content_hash = ? AND status = ?", contentHash, "completed")
+		if req.APIKeyID != nil {
+			q = q.Where("api_key_id = ?", *req.APIKeyID)
+		} else {
+			q = q.Where("api_key_id IS NULL")
+		}
+		err := q.Order("created_at DESC").First(&cached).Error
 		if err == nil {
 			return &cached, nil
 		}
@@ -112,7 +102,7 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		SourceURL: req.SourceURL,
 		Metadata:  metaJSON,
 		Status:    "pending",
-		TenantID:  req.TenantID,
+		APIKeyID:  req.APIKeyID,
 	}
 	if err := s.db.Create(&doc).Error; err != nil {
 		return nil, err
@@ -127,8 +117,6 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 		ContentHash:  contentHash,
 		CallbackURL:  req.CallbackURL,
 		APIKeyID:     req.APIKeyID,
-		CredentialID: req.CredentialID,
-		TenantID:     req.TenantID,
 		PersistGraph: persistGraph,
 	}
 	if err := s.db.Create(&job).Error; err != nil {
@@ -142,13 +130,13 @@ func (s *JobService) Submit(req JobSubmitRequest) (*model.Job, error) {
 	return &job, nil
 }
 
-func (s *JobService) GetByUUID(uuid string, tenantID uint) (*model.Job, error) {
+func (s *JobService) GetByUUID(uuid string, apiKeyID *uint) (*model.Job, error) {
 	var job model.Job
 	q := s.db.Preload("StepLogs", func(db *gorm.DB) *gorm.DB {
 		return db.Order("step_order ASC")
 	}).Where("uuid = ?", uuid)
-	if tenantID > 0 {
-		q = q.Where("tenant_id = ?", tenantID)
+	if apiKeyID != nil {
+		q = q.Where("api_key_id = ?", *apiKeyID)
 	}
 	if err := q.First(&job).Error; err != nil {
 		return nil, err
@@ -206,28 +194,11 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 		},
 		LLM:      s.gw,
 		DB:       s.db,
-		TenantID: job.TenantID,
+		APIKeyID: job.APIKeyID,
 	}
 
 	if vectordb.Available() {
 		pctx.VectorDB = vectordb.Default()
-	}
-
-	if job.CredentialID != nil {
-		credSvc := NewCredentialService(s.db)
-		cred, apiKey, err := credSvc.GetDecrypted(*job.CredentialID)
-		if err != nil {
-			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "credential error: " + err.Error()}).Error; dbErr != nil {
-				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
-			}
-			return err
-		}
-		pctx.LLMOverride = &pipeline.LLMOverrideConfig{
-			ProviderType: cred.ProviderType,
-			APIKey:       apiKey,
-			BaseURL:      cred.BaseURL,
-			Model:        cred.DefaultModel,
-		}
 	}
 
 	totalSteps := len(p.Steps)
@@ -299,7 +270,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 			}
 			if job.PersistGraph {
-				if persistErr := s.persister.Persist(pctx, doc.ID, job.TenantID); persistErr != nil {
+				if persistErr := s.persister.Persist(pctx, doc.ID); persistErr != nil {
 					if dbErr := s.db.Model(&job).Updates(map[string]any{"error": "persist results: " + persistErr.Error()}).Error; dbErr != nil {
 						logger.Warn("failed to update job error", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 					}
@@ -318,7 +289,7 @@ func (s *JobService) Execute(ctx context.Context, jobID uint) error {
 	}
 
 	if job.PersistGraph {
-		if err := s.persister.Persist(pctx, doc.ID, job.TenantID); err != nil {
+		if err := s.persister.Persist(pctx, doc.ID); err != nil {
 			if dbErr := s.db.Model(&job).Updates(map[string]any{"status": "failed", "error": "persist results: " + err.Error()}).Error; dbErr != nil {
 				logger.Warn("failed to update job status", zap.Uint("job_id", job.ID), zap.Error(dbErr))
 			}
@@ -430,12 +401,12 @@ func (s *JobService) fireWebhook(job model.Job, event string, result any, errMsg
 	}, secret)
 }
 
-func (s *JobService) List(page, pageSize int, status string, tenantID uint) ([]model.Job, int64, error) {
+func (s *JobService) List(page, pageSize int, status string, apiKeyID *uint) ([]model.Job, int64, error) {
 	var jobs []model.Job
 	var total int64
 	q := s.db.Model(&model.Job{})
-	if tenantID > 0 {
-		q = q.Where("tenant_id = ?", tenantID)
+	if apiKeyID != nil {
+		q = q.Where("api_key_id = ?", *apiKeyID)
 	}
 	if status != "" {
 		q = q.Where("status = ?", status)

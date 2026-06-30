@@ -34,7 +34,6 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, err.Error()))
 		return
 	}
-	req.TenantID = getTenantID(c)
 	key, err := h.svc.Create(req)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
@@ -52,7 +51,7 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 // @Security BearerAuth
 // @Router /admin/api-keys [get]
 func (h *APIKeyHandler) List(c *gin.Context) {
-	list, err := h.svc.List(getTenantID(c))
+	list, err := h.svc.List()
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -82,7 +81,7 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 		resp.BadRequest(c, errors.WithMessage(errors.ErrInvalidParams, err.Error()))
 		return
 	}
-	key, err := h.svc.Update(id, req, getTenantID(c))
+	key, err := h.svc.Update(id, req)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
@@ -104,7 +103,7 @@ func (h *APIKeyHandler) Delete(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	if err := h.svc.Delete(id, getTenantID(c)); err != nil {
+	if err := h.svc.Delete(id); err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
 	}
@@ -132,7 +131,7 @@ func (h *APIKeyHandler) Usage(c *gin.Context) {
 			days = n
 		}
 	}
-	usage, err := h.svc.GetUsage(id, days, getTenantID(c))
+	usage, err := h.svc.GetUsage(id, days)
 	if err != nil {
 		resp.InternalError(c, errors.WithMessage(errors.ErrInternal, err.Error()))
 		return
