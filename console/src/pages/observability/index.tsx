@@ -24,7 +24,7 @@ const dayFilters = [
 ];
 
 export default function ObservabilityPage() {
-  const [tab, setTab] = useState<Tab>('pipeline');
+  const [tab, setTab] = useState('pipeline');
   const [days, setDays] = useState(7);
 
   return (
@@ -37,7 +37,7 @@ export default function ObservabilityPage() {
         }
       />
 
-      <Tabs items={tabItems} value={tab} onChange={v => setTab(v as Tab)} />
+      <Tabs items={tabItems} value={tab} onChange={setTab} />
 
       {tab === 'pipeline' && <PipelineTab days={days} />}
       {tab === 'llm' && <LLMTab days={days} />}

@@ -98,7 +98,7 @@ export default function APIKeyPanel() {
                 <Badge variant={k.active ? 'success' : 'default'}>{k.active ? '启用' : '停用'}</Badge>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                <span className="font-mono">{k.prefix}••••</span>
+                <span className="font-mono">{k.key}</span>
                 {k.expires_at && <span>过期: {k.expires_at.slice(0, 10)}</span>}
                 <span>日限: {k.daily_limit || '∞'}</span>
                 <span>月限: {k.monthly_limit || '∞'}</span>
@@ -106,7 +106,7 @@ export default function APIKeyPanel() {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Button variant="ghost" size="sm" onClick={() => setUsageId(usageId === k.id ? null : k.id)} title="用量"><BarChart3 className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(k.prefix + '••••'); toast.info('前缀已复制'); }} title="复制前缀"><Copy className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(k.key); toast.info('已复制'); }} title="复制"><Copy className="w-4 h-4" /></Button>
               <Button variant="ghost" size="sm" onClick={() => toggleMut.mutate({ id: k.id, active: !k.active })}>{k.active ? '停用' : '启用'}</Button>
               <Button variant="ghost" size="sm" onClick={() => openEdit(k)}>编辑</Button>
               <button onClick={() => setDeleteId(k.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all">
