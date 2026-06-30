@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS prompt_templates (
     variables JSONB,
     version INT NOT NULL DEFAULT 1
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name ON prompt_templates(name);
 CREATE INDEX IF NOT EXISTS idx_prompt_templates_deleted_at ON prompt_templates(deleted_at);
 
 CREATE TABLE IF NOT EXISTS pipelines (
